@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Workshop2026-M1-{{GROUP}} – Dossier technique ARGUS</title>
+<link rel="stylesheet" href="report.css">
+</head>
+<body>
+
+<!-- =============================================================== COUVERTURE -->
+<section class="cover">
+  <p class="cover-kicker">EPSI · Workshop BAC+4 2026 · Mission Sentinel-X</p>
+  <h1 class="cover-title">ARGUS</h1>
+  <p class="cover-sub">Rapport d'ingénierie technique<br>Variante C « Jumeau virtuel » sécurisé</p>
+  <svg class="cover-art" viewBox="0 0 600 220" aria-hidden="true">
+    <g fill="none" stroke="#3E7391" stroke-width="1.2" opacity="0.7">
+      <path d="M0 170 Q120 120 240 150 T600 120"/><path d="M0 185 Q140 140 260 165 T600 140"/>
+      <path d="M0 200 Q160 160 280 180 T600 160"/><path d="M0 155 Q100 100 220 135 T600 100"/>
+    </g>
+    <rect x="200" y="70" width="200" height="90" fill="none" stroke="#9CCBE8" stroke-dasharray="5 4"/>
+    <g fill="#3DDC97"><circle cx="230" cy="95" r="6"/><circle cx="370" cy="100" r="6"/><circle cx="300" cy="140" r="6"/><circle cx="250" cy="145" r="6"/></g>
+    <circle cx="340" cy="85" r="7" fill="#F5B524"/>
+    <path d="M200 160 A100 100 0 0 1 400 160" fill="none" stroke="#6F8BFF" stroke-width="1.5" opacity="0.8"/>
+  </svg>
+  <table class="cover-meta">
+    <tr><th>Groupe</th><td>{{GROUP}}</td></tr>
+    <tr><th>Consortium</th><td>{{TEAM}}</td></tr>
+    <tr><th>Filières</th><td>EISI DEV · EISI IA · EISI INFRA</td></tr>
+    <tr><th>Version</th><td>{{VERSION}} — {{DATE}}</td></tr>
+  </table>
+</section>
+
+<!-- =============================================================== SOMMAIRE -->
+<section class="page">
+  <h2 class="no-num">Sommaire</h2>
+  <ol class="toc">
+    <li>Synthèse</li>
+    <li>Variante d'architecture retenue</li>
+    <li>Schéma réseau et plan d'adressage</li>
+    <li>Flux de données et protocole</li>
+    <li>Schéma de câblage électronique (nœud ESP32)</li>
+    <li>Matrice de sécurité</li>
+    <li>Documentation de l'intelligence artificielle</li>
+    <li>Rapport d'audit post-pentest</li>
+    <li>Maintien en condition opérationnelle</li>
+    <li>Annexe : poster A3</li>
+  </ol>
+</section>
+
+<!-- =============================================================== 1 SYNTHÈSE -->
+<section class="page">
+  <h2>Synthèse</h2>
+  <p class="lead">ARGUS supervise une flotte de nœuds Sentinel-X virtuels déployés sur l'avant-poste AetherCorp K-7.
+  Il réunit sur une seule chronologie les trois menaces du cahier des charges : <strong>environnementale</strong>
+  (fuite de gaz, surchauffe), <strong>intrusion physique</strong> et <strong>cyberattaque</strong>.</p>
+
+  <div class="kpis">
+    <div><b>32 s</b><span>détection d'une surchauffe lente par l'IA, contre 278 s pour un seuil fixe</span></div>
+    <div><b>6 / 6</b><span>attaques de l'audit bloquées <em>et</em> détectées sur la pile réelle</span></div>
+    <div><b>7</b><span>couches de défense en profondeur, de l'hôte à la détection</span></div>
+    <div><b>22</b><span>tests automatisés (signatures, rejeu, usurpation, rôles, corrélation)</span></div>
+  </div>
+
+  <h3>Ce que le jury voit en démonstration</h3>
+  <ul>
+    <li>Un jumeau numérique 3D de l'avant-poste : chaque message d'un nœud y vole jusqu'au mât de communication ; une fuite de gaz
+      produit une fumée verte, une surchauffe une zone rouge, un intrus apparaît et est suivi par la caméra du mât.</li>
+    <li>Un nœud « héros » exécutant un vrai micrologiciel C++ sur un ESP32 émulé (Wokwi), relié en TLS mutuel au serveur.</li>
+    <li>Chaque attaque de l'audit est rejetée par la couche prévue et apparaît en direct sur la chronologie cyber.</li>
+  </ul>
+
+  <h3>Écarts assumés par rapport au cahier des charges</h3>
+  <table>
+    <tr><th>Cahier des charges</th><th>ARGUS</th><th>Justification</th></tr>
+    <tr><td>Boîtier physique ESP8266</td><td>ESP32 émulé (Wokwi) + flotte simulée</td><td>Variante validée par notre référente ; ESP8266 non émulé par Wokwi ; l'ESP32 accélère AES/SHA/ECC pour le TLS. Le même binaire se flashe sur un ESP32 réel.</td></tr>
+    <tr><td>Boîtier imprimé 3D, gravure laser</td><td>Non réalisé</td><td>Pas de matériel électronique ; validé avec notre référente. Le produit présenté est la plateforme.</td></tr>
+    <tr><td>Webcam USB + YOLO</td><td>Script YOLOv8n fourni ; caméra virtuelle du jumeau en démonstration</td><td>Le script réel (≈35 ms/trame) reste livré et peut alimenter l'API.</td></tr>
+  </table>
+</section>
+
+<!-- =============================================================== 2 VARIANTE -->
+<section class="page">
+  <h2>Variante d'architecture retenue</h2>
+  <p>Le cahier des charges propose deux options (A : Raspberry Pi 5 ; B : portable d'un apprenant). ARGUS retient une
+  <strong>option C « jumeau virtuel »</strong> : un portable héberge une <strong>machine Linux isolée</strong> (« Outpost ») qui exécute
+  toute la pile Docker-Compose. C'est la « double couche » demandée par notre référente : un système sécurisé à l'intérieur
+  d'un système sécurisé.</p>
+
+  <table>
+    <tr><th>Couche</th><th>Rôle</th><th>Réalisation</th></tr>
+    <tr><td>Externe : poste hôte</td><td>N'expose rien directement</td><td>Windows 11, pare-feu, WSL2 / VM</td></tr>
+    <tr><td>Interne : Outpost Linux</td><td>Exécute la pile, seule surface réseau</td><td>Ubuntu 24.04, Docker Engine, UFW</td></tr>
+    <tr><td>Conteneurs</td><td>Isolés par réseau et par privilèges</td><td>5 services + profils optionnels</td></tr>
+  </table>
+
+  <h3>Composants</h3>
+  <table>
+    <tr><th>Composant</th><th>Technologie</th><th>Filière</th></tr>
+    <tr><td>Nœud héros (micrologiciel)</td><td>C++ / PlatformIO, ESP32 émulé (Wokwi)</td><td>DEV</td></tr>
+    <tr><td>Flotte simulée + scénarios</td><td>Python, modèle physique des capteurs</td><td>DEV</td></tr>
+    <tr><td>Broker</td><td>Eclipse Mosquitto 2.0, MQTT sur TLS mutuel</td><td>INFRA</td></tr>
+    <tr><td>API REST + WebSocket</td><td>FastAPI, PostgreSQL 16</td><td>DEV</td></tr>
+    <tr><td>Tableau de bord</td><td>React 19, Three.js (jumeau 3D), Recharts</td><td>DEV</td></tr>
+    <tr><td>Proxy HTTPS</td><td>Caddy 2</td><td>INFRA</td></tr>
+    <tr><td>Détection d'anomalies</td><td>scikit-learn (Isolation Forest, EllipticEnvelope)</td><td>IA</td></tr>
+    <tr><td>Vision</td><td>YOLOv8n / OpenCV HOG, floutage des visages</td><td>IA</td></tr>
+    <tr><td>Leurre (honeypot)</td><td>Python asyncio</td><td>INFRA</td></tr>
+  </table>
+</section>
+
+<!-- =============================================================== 3 RÉSEAU -->
+<section class="page">
+  <h2>Schéma réseau et plan d'adressage</h2>
+  <figure>
+    <svg viewBox="0 0 760 380" class="diagram" role="img" aria-label="Schéma réseau ARGUS">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1B2A35"/></marker></defs>
+      <rect x="10" y="10" width="740" height="360" rx="6" class="zone"/>
+      <text x="22" y="32" class="zt">Réseau de table 192.168.10.0/24 — point d'accès dédié, isolé des autres groupes</text>
+      <!-- operator laptops on the left -->
+      <rect x="25" y="55" width="215" height="110" rx="6" class="host"/>
+      <text x="37" y="77" class="ht">Portable n°2 — commandement</text>
+      <text x="37" y="99" class="small">192.168.10.20</text>
+      <text x="37" y="117" class="small">tableau de bord + jumeau 3D</text>
+      <text x="37" y="135" class="small">vision YOLOv8n (option)</text>
+      <rect x="25" y="200" width="215" height="140" rx="6" class="host"/>
+      <text x="37" y="222" class="ht">Portable n°3 — terrain</text>
+      <text x="37" y="244" class="small">192.168.10.30</text>
+      <text x="37" y="262" class="small">ESP32 Wokwi (10.13.37.2,</text>
+      <text x="37" y="278" class="small">via la passerelle Wokwi)</text>
+      <text x="37" y="296" class="small">flotte simulée sentinel-01…04</text>
+      <!-- outpost -->
+      <rect x="300" y="45" width="440" height="310" rx="6" class="host"/>
+      <text x="312" y="67" class="ht">Portable n°1 — hôte (couche externe)</text>
+      <rect x="315" y="80" width="410" height="262" rx="6" class="vm"/>
+      <text x="327" y="101" class="ht">Outpost Linux 192.168.10.10 (couche interne)</text>
+      <g class="svc">
+        <rect x="335" y="115" width="125" height="38" rx="4"/><text x="397" y="139">Caddy :443</text>
+        <rect x="335" y="215" width="125" height="38" rx="4"/><text x="397" y="239">Mosquitto :8883</text>
+        <rect x="335" y="285" width="125" height="38" rx="4" class="decoy"/><text x="397" y="309">Leurre :1883/:2323</text>
+        <rect x="555" y="140" width="150" height="38" rx="4"/><text x="630" y="164">API (FastAPI)</text>
+        <rect x="555" y="210" width="150" height="38" rx="4"/><text x="630" y="234">PostgreSQL</text>
+        <rect x="555" y="280" width="150" height="38" rx="4"/><text x="630" y="304">Modèles IA</text>
+      </g>
+      <path d="M240 110 L335 134" class="ln" marker-end="url(#ar)"/><text x="248" y="104" class="lbl">HTTPS / WSS</text>
+      <path d="M240 270 L335 234" class="ln" marker-end="url(#ar)"/><text x="248" y="290" class="lbl">MQTTS mTLS</text>
+      <path d="M460 134 L555 154" class="ln" marker-end="url(#ar)"/>
+      <path d="M460 234 L555 166" class="ln" marker-end="url(#ar)"/>
+      <path d="M460 304 L555 172" class="ln dash" marker-end="url(#ar)"/>
+      <path d="M630 178 L630 210" class="ln" marker-end="url(#ar)"/>
+      <path d="M680 178 L680 280" class="ln" marker-end="url(#ar)"/>
+    </svg>
+    <figcaption>Topologie « Edge-to-Server » à trois postes. Repli possible sur un seul portable (même architecture, IP différentes).</figcaption>
+  </figure>
+
+  <h3>Plan d'adressage</h3>
+  <table>
+    <tr><th>Segment</th><th>Plage</th><th>Hôtes</th></tr>
+    <tr><td>LAN de table (Wi-Fi)</td><td>192.168.10.0/24</td><td>.1 AP · .10 Outpost · .20 commandement · .30 terrain · .100–.150 DHCP invités</td></tr>
+    <tr><td>Docker <code>edge_net</code></td><td>172.20.10.0/24</td><td>mosquitto, leurre (seuls services publiés)</td></tr>
+    <tr><td>Docker <code>core_net</code> (interne)</td><td>172.20.20.0/24</td><td>api, postgres, mosquitto — aucune route vers l'extérieur</td></tr>
+    <tr><td>Docker <code>ops_net</code></td><td>172.20.30.0/24</td><td>caddy, api</td></tr>
+    <tr><td>Docker <code>decoy_net</code> (interne)</td><td>172.20.40.0/24</td><td>leurre → api (alertes uniquement)</td></tr>
+    <tr><td>Wi-Fi virtuel Wokwi</td><td>10.13.37.0/24</td><td>nœud héros, NAT par la passerelle Wokwi</td></tr>
+  </table>
+
+  <h3>Surface exposée de l'Outpost</h3>
+  <table>
+    <tr><th>Port</th><th>Service</th><th>Autorisé depuis</th></tr>
+    <tr><td>443/tcp</td><td>Caddy (tableau de bord + API)</td><td>LAN de table</td></tr>
+    <tr><td>8883/tcp</td><td>Mosquitto, TLS mutuel</td><td>LAN de table</td></tr>
+    <tr><td>1883/tcp, 2323/tcp</td><td>Leurre (faux broker, fausse console)</td><td>tous — chaque accès est journalisé</td></tr>
+    <tr><td>22/tcp</td><td>SSH par clé uniquement</td><td>poste d'administration 192.168.10.20</td></tr>
+  </table>
+</section>
+
+<!-- =============================================================== 4 FLUX -->
+<section class="page">
+  <h2>Flux de données et protocole</h2>
+  <figure>
+    <svg viewBox="0 0 760 270" class="diagram flow" role="img" aria-label="Chaîne de traitement d'un message">
+      <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1B2A35"/></marker></defs>
+      <g class="svc">
+        <rect x="10" y="40" width="120" height="50" rx="4"/><text x="70" y="62">Nœud</text><text x="70" y="80" class="small">signe + séquence</text>
+        <rect x="170" y="40" width="130" height="50" rx="4"/><text x="235" y="62">Mosquitto</text><text x="235" y="80" class="small">mTLS + ACL par CN</text>
+        <rect x="340" y="40" width="130" height="50" rx="4"/><text x="405" y="62">API</text><text x="405" y="80" class="small">HMAC, rejeu, schéma</text>
+        <rect x="510" y="40" width="110" height="50" rx="4"/><text x="565" y="62">Modèles IA</text><text x="565" y="80" class="small">capteurs + trafic</text>
+        <rect x="650" y="40" width="100" height="50" rx="4"/><text x="700" y="62">Tableau</text><text x="700" y="80" class="small">WebSocket</text>
+      </g>
+      <g class="ln" marker-end="url(#ar2)"><path d="M130 65H170"/><path d="M300 65H340"/><path d="M470 65H510"/><path d="M620 65H650"/></g>
+      <path d="M405 90 V150 H120" class="ln dash" marker-end="url(#ar2)"/>
+      <text x="130" y="142" class="lbl">message invalide → évènement « cyber » (signature, rejeu, usurpation…)</text>
+      <path d="M700 90 V210 H470" class="ln" marker-end="url(#ar2)"/>
+      <text x="480" y="202" class="lbl">commande opérateur (JWT rôle « operator »)</text>
+      <path d="M405 210 V256 H40 V95" class="ln" marker-end="url(#ar2)"/>
+      <text x="80" y="244" class="lbl">commande signée (clé du nœud) : toute commande forgée est rejetée</text>
+    </svg>
+  </figure>
+
+  <h3>Topics MQTT</h3>
+  <table>
+    <tr><th>Topic</th><th>Sens</th><th>QoS</th><th>Contenu</th></tr>
+    <tr><td><code>argus/v1/nodes/{id}/telemetry</code></td><td>nœud → serveur</td><td>1</td><td>mesures toutes les 2 s</td></tr>
+    <tr><td><code>argus/v1/nodes/{id}/events</code></td><td>nœud → serveur</td><td>1</td><td>pir, boot, tamper, ack</td></tr>
+    <tr><td><code>argus/v1/nodes/{id}/status</code></td><td>nœud → serveur</td><td>1 (retenu)</td><td>online / offline (Last Will)</td></tr>
+    <tr><td><code>argus/v1/nodes/{id}/cmd</code></td><td>serveur → nœud</td><td>1</td><td>buzzer, led, écran</td></tr>
+  </table>
+  <p><code>{id}</code> est le Common Name du certificat client du nœud : Mosquitto l'impose (<code>use_identity_as_username</code> + ACL <code>pattern</code>),
+  un nœud ne peut donc jamais publier au nom d'un autre.</p>
+
+  <h3>Enveloppe signée</h3>
+  <pre>{"v":1,"node":"sentinel-01","seq":1759700000123,"ts":1759700000,"type":"telemetry",
+ "data":{"temp_c":24.1,"hum_pct":41.0,"gas_ppm":180,"pir":false}}
+&lt;HMAC-SHA256(clé_du_nœud, octets_exacts_du_corps) en hexadécimal&gt;</pre>
+  <ul>
+    <li><b>Anti-rejeu</b> : <code>seq</code> strictement croissant par nœud ; tout <code>seq</code> déjà vu est rejeté.</li>
+    <li><b>Fraîcheur</b> : écart d'horloge &gt; 30 s rejeté (le nœud se synchronise en NTP).</li>
+    <li><b>Pourquoi mTLS et HMAC ?</b> mTLS protège chaque saut ; l'HMAC protège de bout en bout <em>à travers</em> le broker :
+      un broker compromis ne peut ni forger ni altérer une mesure.</li>
+  </ul>
+
+  <h3>API REST / WebSocket (<code>https://outpost/api/v1</code>)</h3>
+  <table>
+    <tr><th>Méthode</th><th>Chemin</th><th>Accès</th><th>Rôle</th></tr>
+    <tr><td>POST</td><td>/auth/login</td><td>public, limité en débit</td><td>obtenir un JWT</td></tr>
+    <tr><td>POST</td><td>/alerts</td><td>jeton de service</td><td>alertes externes (vision, leurre) — exigé par le sujet</td></tr>
+    <tr><td>GET · WS</td><td>/nodes, /telemetry, /events · /ws</td><td>viewer</td><td>flotte, historiques, chronologie, flux temps réel</td></tr>
+    <tr><td>POST</td><td>/nodes/{id}/commands</td><td>operator</td><td>actionneurs</td></tr>
+  </table>
+</section>
+
+<!-- =============================================================== 5 CÂBLAGE -->
+<section class="page">
+  <h2>Schéma de câblage électronique (nœud ESP32)</h2>
+  <p>Montage défini dans <code>firmware/sentinel-node/diagram.json</code> et simulé par Wokwi. Les composants sont ceux de la
+  liste de matériel du sujet (DHT22, MQ-2, PIR HC-SR501, OLED I2C 0,96", buzzer, LED) plus un contact d'ouverture du boîtier.</p>
+  <figure>
+    <svg viewBox="0 0 760 360" class="diagram" role="img" aria-label="Câblage du nœud ESP32">
+      <rect x="300" y="60" width="160" height="250" rx="6" class="mcu"/>
+      <text x="380" y="88" class="ht" text-anchor="middle">ESP32 DevKitC v4</text>
+      <g class="pin" text-anchor="end">
+        <text x="294" y="125">GPIO15</text><text x="294" y="165">GPIO34 (ADC1)</text><text x="294" y="205">GPIO27</text><text x="294" y="245">GPIO4</text>
+      </g>
+      <g class="pin">
+        <text x="466" y="125">GPIO21 SDA</text><text x="466" y="145">GPIO22 SCL</text><text x="466" y="185">GPIO25</text>
+        <text x="466" y="225">GPIO18</text><text x="466" y="245">GPIO19</text><text x="466" y="265">GPIO23</text>
+      </g>
+      <g class="part">
+        <rect x="40" y="105" width="130" height="34" rx="4"/><text x="105" y="126">DHT22 (SDA)</text>
+        <rect x="40" y="145" width="130" height="34" rx="4"/><text x="105" y="166">MQ-2 (AO, 3V3)</text>
+        <rect x="40" y="185" width="130" height="34" rx="4"/><text x="105" y="206">PIR (OUT, 5V)</text>
+        <rect x="40" y="225" width="130" height="34" rx="4"/><text x="105" y="246">Bouton TAMPER</text>
+        <rect x="590" y="110" width="140" height="44" rx="4"/><text x="660" y="136">OLED SSD1306 0x3C</text>
+        <rect x="590" y="168" width="140" height="34" rx="4"/><text x="660" y="189">Buzzer</text>
+        <rect x="590" y="210" width="140" height="70" rx="4"/><text x="660" y="232">LED verte / orange</text><text x="660" y="250">/ rouge + 220 Ω</text>
+      </g>
+      <g class="wire">
+        <path d="M170 122H230"/><path d="M170 162H200"/><path d="M170 202H230"/><path d="M170 242H230"/>
+        <path d="M545 122H590"/><path d="M545 142H590"/><path d="M520 182H590"/><path d="M520 222H590"/><path d="M520 242H590"/><path d="M520 262H590"/>
+      </g>
+    </svg>
+    <figcaption>Le MQ-2 est alimenté en 3,3 V pour rester dans la plage de l'ADC ; l'entrée TAMPER utilise le pull-up interne (actif à l'état bas).</figcaption>
+  </figure>
+  <table>
+    <tr><th>Composant</th><th>Broches ESP32</th><th>Alimentation</th><th>Usage dans le micrologiciel</th></tr>
+    <tr><td>DHT22</td><td>GPIO15</td><td>3V3</td><td>température / humidité toutes les 2 s</td></tr>
+    <tr><td>MQ-2</td><td>GPIO34 (ADC1)</td><td>3V3</td><td>courbe log-log Rs/R0 ; R0 calibré après stabilisation (≤30 s), aucune valeur envoyée avant</td></tr>
+    <tr><td>PIR HC-SR501</td><td>GPIO27</td><td>5V</td><td>front montant → évènement « pir »</td></tr>
+    <tr><td>Bouton TAMPER</td><td>GPIO4 (pull-up)</td><td>—</td><td>ouverture du boîtier → évènement « tamper »</td></tr>
+    <tr><td>OLED SSD1306</td><td>GPIO21/22 (I2C)</td><td>3V3</td><td>IP, état TLS, mesures, dernier évènement, message opérateur</td></tr>
+    <tr><td>Buzzer</td><td>GPIO25</td><td>—</td><td>sirène pilotée à distance (commande signée)</td></tr>
+    <tr><td>LED ×3</td><td>GPIO18/19/23 + 220 Ω</td><td>—</td><td>état : vert normal, orange connexion, rouge alarme</td></tr>
+  </table>
+  <p class="note">Ressources : 74,6 % de la flash et 14,4 % de la RAM d'un ESP32 DevKit. Clés et certificats injectés à la compilation
+  depuis un en-tête généré (<code>secrets.h</code>, jamais versionné).</p>
+</section>
+
+<!-- =============================================================== 6 MATRICE -->
+<section class="page">
+  <h2>Matrice de sécurité</h2>
+  <table class="matrix">
+    <tr><th>Couche</th><th>Mesure</th><th>Menace couverte</th><th>Preuve</th></tr>
+    <tr><td>Hôte</td><td>Pare-feu Windows, seule la machine Outpost est exposée</td><td>Accès direct à l'hôte</td><td>capture des règles</td></tr>
+    <tr><td rowspan="3">Système Outpost</td><td>UFW : refus par défaut, 4 ports autorisés</td><td>Découverte de services</td><td><code>ufw status verbose</code>, nmap depuis un autre poste</td></tr>
+    <tr><td>SSH par clé uniquement, pas de root, utilisateur unique, fail2ban</td><td>Force brute SSH</td><td><code>sshd -T</code></td></tr>
+    <tr><td>sysctl réseau durci, auditd, mises à jour automatiques</td><td>Usurpation IP, persistance</td><td><code>/etc/sysctl.d/90-argus.conf</code></td></tr>
+    <tr><td rowspan="2">Conteneurs</td><td>Système de fichiers en lecture seule, <code>cap_drop: ALL</code>, <code>no-new-privileges</code>, utilisateurs non-root, limites mémoire/CPU/PID</td><td>Évasion, déni de service local</td><td><code>docker inspect</code>, compose</td></tr>
+    <tr><td>Réseaux internes sans route sortante (<code>core_net</code>, <code>decoy_net</code>)</td><td>Rebond latéral</td><td><code>docker network inspect</code></td></tr>
+    <tr><td rowspan="3">Transport</td><td>MQTTS 8883 avec certificat client obligatoire (mTLS), TLS ≥ 1.2</td><td>Écoute, homme du milieu, client non autorisé</td><td>Wireshark : trafic chiffré uniquement</td></tr>
+    <tr><td>HTTPS 443 (Caddy), en-têtes CSP / X-Frame-Options / nosniff</td><td>Interception, XSS, clickjacking</td><td><code>curl -I</code></td></tr>
+    <tr><td>AC privée avec <b>contraintes de nom</b> : ne peut signer que pour les noms ARGUS</td><td>Abus de l'AC si sa clé fuit</td><td>certificat « www.mybank.com » rejeté : <i>permitted subtree violation</i></td></tr>
+    <tr><td rowspan="2">Identité / message</td><td>Un certificat par nœud, ACL Mosquitto liées au CN</td><td>Usurpation d'un nœud</td><td>test d'audit « usurpation »</td></tr>
+    <tr><td>HMAC-SHA256 par nœud, séquence anti-rejeu, fraîcheur 30 s, validation de schéma, taille max</td><td>Falsification, rejeu, injection</td><td>tests d'audit + 22 tests unitaires</td></tr>
+    <tr><td rowspan="2">Application</td><td>JWT, rôles viewer / operator, mots de passe scrypt</td><td>Élévation de privilèges</td><td>test : viewer → 403 sur les commandes</td></tr>
+    <tr><td>Limitation de débit (login, alertes, commandes), jetons de service</td><td>Force brute, inondation</td><td>test : 429 après 5 essais</td></tr>
+    <tr><td rowspan="3">Détection</td><td>Chaque message rejeté devient un évènement « cyber »</td><td>Attaque silencieuse</td><td>chronologie du tableau de bord</td></tr>
+    <tr><td>Modèle de trafic (EllipticEnvelope), surveillance du journal Mosquitto</td><td>Inondation, prise de session</td><td>audit : détection confirmée</td></tr>
+    <tr><td>Leurre : faux broker et fausse console</td><td>Reconnaissance, vol d'identifiants</td><td>identifiants capturés en direct</td></tr>
+    <tr><td>Secrets</td><td>Docker secrets, aucun secret dans Git (<code>.gitignore</code> vérifié)</td><td>Fuite par le dépôt</td><td>contrôle avant chaque commit</td></tr>
+  </table>
+</section>
+
+<!-- =============================================================== 7 IA -->
+<section class="page">
+  <h2>Documentation de l'intelligence artificielle</h2>
+  <h3>Modèle capteurs : Isolation Forest</h3>
+  <p>Conformément au sujet, aucune règle statique du type <code>if temp &gt; 40</code> n'est utilisée pour détecter. Chaque nœud
+  alimente une fenêtre glissante de 15 mesures (30 s) transformée en 10 caractéristiques : niveaux, <b>pentes</b> (cinétique),
+  volatilité, <b>corrélation température/gaz</b> et taux de présence. Le modèle est entraîné uniquement sur du fonctionnement normal
+  (44 580 fenêtres issues de 30 nœuds simulés avec des lignes de base différentes) ; il signale ce qui s'en écarte.</p>
+  <table>
+    <tr><th>Scénario</th><th>Détection par le modèle</th><th>Seuil fixe (référence)</th><th>Gain</th></tr>
+    <tr><td>Fuite de gaz</td><td>4 s</td><td>58 s</td><td>×14</td></tr>
+    <tr><td>Surchauffe lente + micro-déviation de gaz (exemple du sujet)</td><td>32 s</td><td>278 s</td><td>×8,7</td></tr>
+    <tr><td>Capteur bloqué / erratique</td><td>2 s</td><td>212 s</td><td>×106</td></tr>
+  </table>
+  <p>Taux de fausses alertes sur données normales : <b>0,34 %</b>. Le seuil n'existe que comme vérité terrain pour l'évaluation.</p>
+
+  <h3>Modèle trafic : EllipticEnvelope</h3>
+  <p>Fenêtres de 10 s par nœud : nombre de messages, taille moyenne, messages rejetés, types distincts (échelle logarithmique).
+  <b>Retour d'expérience</b> : un Isolation Forest a d'abord été essayé et a échoué. Il ne sait pas extrapoler : une inondation de
+  400 messages tombe dans la même feuille que le seau normal le plus chargé. Une distance de Mahalanobis robuste (EllipticEnvelope)
+  croît sans borne avec l'écart et détecte tout : inondations de 30 et 400 messages, charges anormales, messages rejetés, nœud
+  devenu silencieux — 0 % de fausses alertes. Un délai de grâce au redémarrage évite de confondre la rafale de reconnexion avec une
+  attaque ; il est plafonné, car l'audit a montré qu'un nœud compromis pouvait sinon masquer une inondation derrière un faux « boot ».</p>
+
+  <h3>Corrélation</h3>
+  <p>Les sorties des modèles et des capteurs sont pondérées sur 30 s (présence 1, personne vue par la caméra 2, anomalie capteur 2,
+  évènement cyber 1, leurre 1). Score ≥ 3 : incident « warning » ; ≥ 4 : « critical ». Exemple : mouvement + personne + attaque réseau
+  sur le même nœud → incident critique.</p>
+
+  <h3>Vision</h3>
+  <ul>
+    <li>Script autonome <code>ai/vision/vision.py</code> : webcam USB redimensionnée en 640×480, YOLOv8n (classe « personne »),
+      repli OpenCV HOG sans GPU (≈35 ms par trame, sous la contrainte de 100 ms du sujet).</li>
+    <li>Zone interdite polygonale : une personne dont les pieds entrent dans la zone déclenche une alerte (anti-rebond 10 s) via
+      <code>POST /api/v1/alerts</code>, vérifiée en TLS contre l'AC ARGUS.</li>
+    <li><b>Protection des données (RGPD)</b> : la tête de chaque personne est pixelisée <em>avant</em> tout affichage ou diffusion ;
+      aucune image n'est enregistrée.</li>
+  </ul>
+</section>
+
+<!-- =============================================================== 8 AUDIT -->
+<section class="page">
+  <h2>Rapport d'audit post-pentest</h2>
+  <h3>Périmètre et méthode</h3>
+  <p>Audit de <b>notre propre pile</b>, sur l'environnement réel (Mosquitto, Caddy, PostgreSQL dans l'Outpost), avec l'outil
+  d'auto-contrôle du dépôt (<code>tools/redteam/attacks.py</code>). Pour chaque scénario, deux questions : l'attaque est-elle
+  <b>bloquée</b> ? et le tableau de bord l'a-t-il <b>détectée</b> (évènement confirmé via l'API) ?</p>
+
+  <h3>Résultats (pile réelle, 6 octobre 2026)</h3>
+  <table>
+    <tr><th>Scénario</th><th>Bloqué par</th><th>Détecté</th><th>Évènement</th></tr>
+    <tr><td>Connexion sans certificat client</td><td>Mosquitto (mTLS)</td><td class="ok">oui</td><td><code>tls_rejected</code></td></tr>
+    <tr><td>MQTT en clair sur 1883</td><td>c'est le leurre</td><td class="ok">oui</td><td><code>decoy_mqtt_login</code> + identifiants</td></tr>
+    <tr><td>Usurpation d'un autre nœud</td><td>ACL Mosquitto</td><td class="ok">oui</td><td><code>session_takeover</code></td></tr>
+    <tr><td>Message signé altéré</td><td>API (HMAC)</td><td class="ok">oui</td><td><code>bad_signature</code></td></tr>
+    <tr><td>Rejeu d'un message capturé</td><td>API (séquence)</td><td class="ok">oui</td><td><code>replay</code></td></tr>
+    <tr><td>Inondation (400 messages)</td><td>limites Mosquitto + IA</td><td class="ok">oui</td><td><code>traffic_anomaly</code></td></tr>
+  </table>
+
+  <h3>Constats corrigés pendant l'audit</h3>
+  <table>
+    <tr><th>#</th><th>Constat</th><th>Gravité</th><th>Correction</th></tr>
+    <tr><td>1</td><td>Les alertes du leurre étaient refusées (401) : jetons de service mal concaténés à l'installation</td><td>Élevée (détection aveugle)</td><td>script corrigé ; l'API accepte virgule ou retour à la ligne</td></tr>
+    <tr><td>2</td><td>Un faux évènement « boot » ouvrait un délai de grâce masquant une inondation</td><td>Élevée (évasion)</td><td>grâce plafonnée aux petites rafales ; test de non-régression</td></tr>
+    <tr><td>3</td><td>L'API ne pouvait pas lire le journal Mosquitto : détections côté broker inopérantes</td><td>Moyenne</td><td>journal lisible par le seul groupe de l'API ; lecture résiliente</td></tr>
+    <tr><td>4</td><td>Configuration et ACL Mosquitto lisibles par tous</td><td>Moyenne</td><td>fichiers privés à l'utilisateur mosquitto (0600)</td></tr>
+    <tr><td>5</td><td>La prise de session d'un nœud n'était pas signalée</td><td>Moyenne</td><td>nouvelle détection <code>session_takeover</code></td></tr>
+    <tr><td>6</td><td>AC racine sans contraintes, à importer dans le magasin Windows</td><td>Moyenne</td><td>AC réémise avec contraintes de nom</td></tr>
+    <tr><td>7</td><td>Les anciennes fausses alertes de rejeu (deux messages dans la même milliseconde)</td><td>Faible</td><td>séquence strictement croissante par émetteur</td></tr>
+  </table>
+
+  <h3>Risques résiduels</h3>
+  <ul>
+    <li>Une publication refusée par les ACL est bloquée mais <b>silencieuse</b> si l'attaquant utilise un identifiant client
+      différent : Mosquitto ne journalise ces refus qu'en mode verbeux. Choix assumé (volume de journaux) ; l'attaque reste sans effet.</li>
+    <li>La clé privée de l'AC réside sur le poste d'administration ; les contraintes de nom en limitent l'impact.</li>
+    <li>Le tableau de bord de développement n'est pas exposé ; seul Caddy l'est.</li>
+  </ul>
+
+  <h3>Pentest croisé du jeudi</h3>
+  <table class="fill">
+    <tr><th>Heure</th><th>Source</th><th>Technique observée</th><th>Bloqué par</th><th>Détecté</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <p class="note">À compléter le jeudi à partir de la chronologie cyber et des identifiants capturés par le leurre.</p>
+</section>
+
+<!-- =============================================================== 9 MCO -->
+<section class="page">
+  <h2>Maintien en condition opérationnelle</h2>
+  <table>
+    <tr><th>Sujet</th><th>Mesure</th></tr>
+    <tr><td>Volume de journaux</td><td>rotation Docker 3 × 10 Mo par conteneur ; journaux Caddy roulés à 10 Mo ; journaux Mosquitto filtrés (pas de mode verbeux)</td></tr>
+    <tr><td>Ressources</td><td>limites mémoire, CPU et PID par conteneur ; Outpost plafonné à 4 Go de RAM ; profil <code>monitoring</code> (Netdata) pour CPU/RAM hôte et conteneurs</td></tr>
+    <tr><td>Disponibilité</td><td><code>restart: unless-stopped</code>, contrôles de santé (API, PostgreSQL), démarrage automatique de la pile avec l'Outpost</td></tr>
+    <tr><td>Supervision des nœuds</td><td>états online / silencieux / offline (Last Will), alerte si un nœud se tait plus de 15 s</td></tr>
+    <tr><td>Redéploiement</td><td>une commande (<code>infra/wsl/setup-outpost-wsl.sh</code>), idempotente ; secrets conservés</td></tr>
+    <tr><td>PKI</td><td><code>pki.sh bootstrap</code> réémet l'ensemble ; liste de révocation chargée par Mosquitto</td></tr>
+  </table>
+</section>
+
+<!-- =============================================================== POSTER A3 -->
+<section class="poster">
+  <header>
+    <p class="cover-kicker">EPSI Workshop 2026 · Mission Sentinel-X · {{GROUP}}</p>
+    <h1>ARGUS</h1>
+    <p class="poster-sub">Un avant-poste surveillé par cent yeux : capteurs, caméra et réseau sur une seule chronologie</p>
+  </header>
+  <div class="poster-grid">
+    <div class="pcard">
+      <h3>Trois menaces, une réponse</h3>
+      <p>Fuite de gaz et surchauffe, intrusion physique, cyberattaque : ARGUS les détecte et les corrèle. Mouvement + personne
+        vue + attaque réseau sur le même point = incident critique.</p>
+    </div>
+    <div class="pcard big">
+      <b>×8,7</b><span>plus rapide qu'un seuil fixe pour détecter une surchauffe lente (32 s au lieu de 278 s)</span>
+    </div>
+    <div class="pcard">
+      <h3>Double couche</h3>
+      <p>La pile tourne dans une machine Linux isolée, à l'intérieur du poste hôte. Seuls 443, 8883 et le leurre sont visibles.</p>
+    </div>
+    <div class="pcard wide">
+      <h3>7 couches de défense</h3>
+      <ol class="layers">
+        <li>Hôte</li><li>Système Outpost</li><li>Conteneurs</li><li>Transport mTLS</li><li>Message signé</li><li>Application</li><li>Détection IA + leurre</li>
+      </ol>
+    </div>
+    <div class="pcard big">
+      <b>6 / 6</b><span>attaques de l'audit bloquées et détectées en direct</span>
+    </div>
+    <div class="pcard">
+      <h3>Nœud réel, sans matériel</h3>
+      <p>Micrologiciel C++ sur ESP32 émulé : DHT22, MQ-2, PIR, OLED, sirène. Le même binaire se flashe sur une carte réelle.</p>
+    </div>
+    <div class="pcard">
+      <h3>IA explicable</h3>
+      <p>Isolation Forest sur la cinétique des capteurs, Mahalanobis sur le trafic réseau, YOLOv8n avec floutage des visages.</p>
+    </div>
+    <div class="pcard">
+      <h3>Jumeau numérique 3D</h3>
+      <p>Chaque message vole jusqu'au mât ; gaz en fumée verte, surchauffe en zone rouge, intrus suivi par la caméra.</p>
+    </div>
+  </div>
+  <p class="poster-foot">Sentinel-X : la sécurité à la bordure.</p>
+</section>
+
+</body>
+</html>

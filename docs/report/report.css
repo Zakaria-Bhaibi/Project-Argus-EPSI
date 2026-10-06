@@ -1,0 +1,93 @@
+/* ARGUS engineering report: A4 print, same palette as the console (ink, fog, threat hues). */
+@page { size: A4; margin: 18mm 17mm 20mm; @bottom-right { content: counter(page); } }
+@page cover { margin: 0; }
+@page poster { size: A3; margin: 0; }
+
+:root {
+  --ink: #1B2A35; --ink-2: #4A5B67; --ink-3: #6E7E89; --rule: #C9D2D8; --fog: #E6EBEE; --paper: #F6F8F9;
+  --night: #0A141C; --env: #B07A00; --intr: #C2185B; --cyber: #2A4BD7; --ok: #2E7D5B;
+}
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; color: var(--ink); font: 10pt/1.5 'Segoe UI', 'Source Sans 3', sans-serif; counter-reset: h2; }
+h1, h2, h3 { font-family: 'Bahnschrift', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif; font-weight: 700; margin: 0; }
+h2 { font-size: 20pt; margin-bottom: 10pt; padding-bottom: 5pt; border-bottom: 2px solid var(--ink); counter-increment: h2; }
+h2.no-num { counter-increment: none; }
+h2:not(.no-num)::before { content: counter(h2) ". "; color: var(--ink-3); }
+h3 { font-size: 12.5pt; margin: 14pt 0 5pt; }
+p { margin: 0 0 7pt; max-width: 170mm; }
+ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+li { margin-bottom: 3pt; }
+code { font: 8.6pt Consolas, monospace; background: var(--fog); padding: 0 3pt; border-radius: 2px; }
+pre { font: 8.2pt/1.45 Consolas, monospace; background: var(--paper); border: 1px solid var(--rule); padding: 7pt 9pt; white-space: pre-wrap; margin: 0 0 8pt; }
+.lead { font-size: 11.5pt; }
+.note { font-size: 8.8pt; color: var(--ink-2); }
+
+table { width: 100%; border-collapse: collapse; margin: 0 0 8pt; font-size: 8.7pt; page-break-inside: auto; }
+tr { page-break-inside: avoid; }
+th { text-align: left; background: var(--ink); color: #fff; font-weight: 600; padding: 4pt 6pt; }
+td { padding: 4pt 6pt; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:nth-child(even) td { background: var(--paper); }
+td.ok { color: var(--ok); font-weight: 700; }
+table.matrix td:first-child[rowspan] { font-weight: 700; background: var(--fog); }
+table.fill td { height: 22pt; }
+
+.page { page-break-before: always; }
+figure { margin: 4pt 0 10pt; page-break-inside: avoid; }
+figcaption { font-size: 8.6pt; color: var(--ink-2); margin-top: 3pt; }
+
+/* ---------------------------------------------------------------- diagrams */
+.diagram { width: 100%; height: auto; font-family: 'Segoe UI', sans-serif; }
+.diagram.flow { max-height: 64mm; }
+.diagram .zone { fill: #F2F5F7; stroke: var(--ink-3); stroke-dasharray: 6 4; }
+.diagram .host { fill: #fff; stroke: var(--ink); stroke-width: 1.2; }
+.diagram .vm { fill: #EAF1F6; stroke: #3E7391; stroke-width: 1.2; }
+.diagram .mcu { fill: #1B2A35; }
+.diagram .mcu + text { fill: #fff; }
+.diagram .zt { font-size: 12px; font-weight: 600; fill: var(--ink-2); }
+.diagram .ht { font-size: 12px; font-weight: 700; fill: var(--ink); }
+.diagram .small { font-size: 10.5px; fill: var(--ink-2); }
+.diagram .lbl { font-size: 10.5px; fill: var(--ink-2); font-style: italic; }
+.diagram .svc rect { fill: #fff; stroke: var(--ink); }
+.diagram .svc rect.decoy { fill: #FFF4E5; stroke: var(--env); }
+.diagram .svc text { font-size: 11.5px; text-anchor: middle; fill: var(--ink); }
+.diagram .svc text.small { font-size: 9.5px; fill: var(--ink-2); }
+.diagram .ln { fill: none; stroke: var(--ink); stroke-width: 1.3; }
+.diagram .dash { stroke-dasharray: 5 4; stroke: var(--env); }
+.diagram .part rect { fill: #fff; stroke: var(--ink); }
+.diagram .part text { font-size: 11px; text-anchor: middle; }
+.diagram .pin text { font-size: 10.5px; fill: var(--ink); font-family: Consolas, monospace; }
+.diagram .wire path { stroke: #3E7391; stroke-width: 2; }
+
+/* ---------------------------------------------------------------- cover */
+.cover { page: cover; height: 297mm; background: var(--night); color: #E6EEF3; padding: 38mm 24mm; display: flex; flex-direction: column; }
+.cover-kicker { color: #9DB0BE; font-size: 10pt; letter-spacing: 0.04em; margin: 0; }
+.cover-title { font-size: 76pt; letter-spacing: 0.16em; margin: 16mm 0 4mm; color: #fff; }
+.cover-sub { font-size: 16pt; line-height: 1.35; color: #CFE0EA; }
+.cover-art { width: 100%; margin: 14mm 0; }
+.cover-meta { margin-top: auto; width: auto; font-size: 10pt; }
+.cover-meta th { background: none; color: #9DB0BE; font-weight: 400; padding: 3pt 14pt 3pt 0; }
+.cover-meta td { border: 0; background: none !important; color: #fff; padding: 3pt 0; }
+
+/* ---------------------------------------------------------------- summary */
+.toc { font-size: 12pt; line-height: 2; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8pt; margin: 10pt 0 12pt; }
+.kpis div { border-top: 3px solid var(--ink); padding-top: 5pt; }
+.kpis b { display: block; font: 700 22pt/1 'Bahnschrift', sans-serif; margin-bottom: 3pt; }
+.kpis span { font-size: 8.6pt; color: var(--ink-2); }
+
+/* ---------------------------------------------------------------- A3 poster */
+.poster { page: poster; page-break-before: always; height: 420mm; background: var(--night); color: #E6EEF3; padding: 26mm 24mm; display: flex; flex-direction: column; }
+.poster h1 { font-size: 96pt; letter-spacing: 0.16em; color: #fff; margin: 6mm 0 2mm; }
+.poster-sub { font-size: 20pt; color: #CFE0EA; max-width: 220mm; margin-bottom: 12mm; }
+.poster-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; flex: 1; }
+.pcard { background: #13232E; border: 1px solid #2B4A5C; border-radius: 4px; padding: 7mm; }
+.pcard h3 { font-size: 17pt; color: #fff; margin: 0 0 4mm; }
+.pcard p { font-size: 12.5pt; color: #CFE0EA; margin: 0; }
+.pcard.big b { display: block; font: 700 64pt/1 'Bahnschrift', sans-serif; color: #3DDC97; }
+.pcard.big span { font-size: 13pt; color: #CFE0EA; }
+.pcard.wide { grid-column: span 2; }
+.layers { display: flex; flex-wrap: wrap; gap: 3mm; list-style: none; padding: 0; margin: 0; counter-reset: l; }
+.layers li { counter-increment: l; background: #1F3A4A; border: 1px solid #3E7391; border-radius: 3px; padding: 2.5mm 4mm; font-size: 13pt; }
+.layers li::before { content: counter(l) "  "; color: #9CCBE8; font-weight: 700; }
+.poster-foot { font: 700 22pt 'Bahnschrift', sans-serif; color: #F5B524; margin: 10mm 0 0; }
