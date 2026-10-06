@@ -162,7 +162,7 @@ class Pipeline:
 
         score = None
         if self.sensor_scorer and reading["gas_ppm"] is not None:
-            r = self.sensor_scorer.update(m.node, reading)
+            r = self.sensor_scorer.update(m.node, reading, ts=m.ts)
             if r:
                 score, is_anomaly = r
                 prev = self.nodes[m.node]["anomaly"]
@@ -191,6 +191,8 @@ class Pipeline:
         elif kind == "boot":
             if self.traffic_scorer:
                 self.traffic_scorer.grace(m.node)
+            if self.sensor_scorer:   # fresh start: don't compare new readings with the previous run's
+                self.sensor_scorer.reset(m.node)
             self.event("system", "info", m.node, "boot", f"{m.node} booted", {"node": m.node, **m.data})
         elif kind == "camera":
             conf = m.data.get("confidence")

@@ -33,9 +33,20 @@ class SensorScorer:
     def __init__(self, models_dir: Path = MODELS_DIR):
         self.windows = Windows()
         self.inner = _ModelScorer(models_dir / "sensor_iforest.joblib")
+        self._last_ts: dict[str, float] = {}
 
-    def update(self, node: str, reading: dict) -> tuple[float, bool] | None:
+    MAX_GAP_S = 10   # a gap means a reboot or an outage: old readings must not mix with new ones
+
+    def reset(self, node: str) -> None:
+        self.windows.buf.pop(node, None)
+
+    def update(self, node: str, reading: dict, ts: float | None = None) -> tuple[float, bool] | None:
         """Returns (score 0..1, is_anomaly) once the node's window is full."""
+        if ts is not None:
+            last = self._last_ts.get(node)
+            if last is not None and ts - last > self.MAX_GAP_S:
+                self.reset(node)
+            self._last_ts[node] = ts
         x = self.windows.push(node, reading)
         if x is None:
             return None

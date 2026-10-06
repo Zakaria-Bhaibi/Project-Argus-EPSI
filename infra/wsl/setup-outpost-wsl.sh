@@ -55,8 +55,11 @@ if [[ "$(sudo cat runtime/secrets/users.json)" == "{}" ]]; then
 fi
 
 echo "== 5/5 build and start the stack (first build: ~5-10 min)"
-sudo docker compose up -d --build
-sudo docker compose ps
+# on this single dev laptop the simulated fleet runs inside the stack (profile "sim"), so it survives
+# terminals closing; on the real 3-laptop setup it runs on the "terrain" laptop instead
+PROFILES="${PROFILES:---profile sim}"
+sudo docker compose $PROFILES up -d --build
+sudo docker compose $PROFILES ps
 echo
 echo "Outpost is up. From Windows: https://localhost (accept the ARGUS CA or the browser warning)."
 echo "Re-sync after code changes:  bash \"$SRC/infra/wsl/setup-outpost-wsl.sh\""

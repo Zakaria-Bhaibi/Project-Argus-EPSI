@@ -247,3 +247,15 @@ def test_camera_sighting_escalates_and_triggers_automatic_response(client):
     kinds = [e["kind"] for e in client.get("/api/v1/events", headers=h).json()]
     assert "person_in_zone" in kinds and "incident" in kinds and "auto_response" in kinds
     assert ("n1", "led", "red") in sent
+
+
+def test_sensor_window_is_reset_after_a_gap():
+    sys.path.insert(0, str(ROOT / "ai/anomaly"))
+    from scorer import SensorScorer
+    sc = SensorScorer()
+    r = {"temp_c": 23.0, "hum_pct": 45.0, "gas_ppm": 180.0, "pir": False}
+    for i in range(14):
+        sc.update("n", r, ts=1000 + 2 * i)
+    assert len(sc.windows.buf["n"]) == 14
+    sc.update("n", r, ts=1000 + 2 * 14 + 60)       # one minute of silence: start over
+    assert len(sc.windows.buf["n"]) == 1
