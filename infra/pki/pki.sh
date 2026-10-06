@@ -7,6 +7,7 @@
 #   ./pki.sh device <node-id>              node cert + HMAC key + firmware secrets header
 #   ./pki.sh revoke <name>                 revoke a cert and regenerate the CRL
 #   ./pki.sh crl                           regenerate the CRL
+#   ./pki.sh bootstrap                     the whole standard PKI (CA + all ARGUS certs)
 set -euo pipefail
 export MSYS2_ARG_CONV_EXCL="/O="   # Git Bash on Windows: do not mangle "/O=..." subjects
 
@@ -15,6 +16,12 @@ cd "$HERE"
 OUT="out"   # relative on purpose: works with native Windows openssl too
 CA_DAYS=825
 LEAF_DAYS=365
+# Least privilege for the CA itself: even if ca.key leaks, the CA can only vouch for ARGUS names,
+# never for e.g. a bank's website (matters because we import ca.crt into the Windows trust store).
+# Non-critical on purpose: mbedTLS (ESP32) rejects unknown *critical* extensions; Windows and
+# browsers enforce name constraints either way.
+NAME_CONSTRAINTS="permitted;DNS:localhost,permitted;DNS:outpost,permitted;DNS:mosquitto,permitted;DNS:host.wokwi.internal,permitted;IP:192.168.10.0/255.255.255.0,permitted;IP:127.0.0.0/255.0.0.0"
+STD_SERVER_SANS="DNS:outpost,DNS:localhost,IP:192.168.10.10,IP:127.0.0.1"
 # first python that actually runs (on Windows "python3" can be a Store stub)
 PY="$(for p in python3 python; do "$p" -c "" 2>/dev/null && { echo "$p"; break; }; done)"
 
@@ -80,7 +87,7 @@ case "$cmd" in
     openssl req -x509 -new -key "$OUT/ca.key" -sha256 -days "$CA_DAYS" \
       -subj "/O=AetherCorp/OU=ARGUS/CN=ARGUS Root CA" \
       -addext "basicConstraints=critical,CA:TRUE,pathlen:0" \
-      -addext "keyUsage=critical,keyCertSign,cRLSign" -out "$OUT/ca.crt"
+      -addext "keyUsage=critical,keyCertSign,cRLSign"       -addext "nameConstraints=$NAME_CONSTRAINTS" -out "$OUT/ca.crt"
     echo '{}' > "$OUT/devices.json"
     gen_crl
     echo "CA created: $OUT/ca.crt"
@@ -115,5 +122,14 @@ PY
     gen_crl
     ;;
   crl) need_ca; gen_crl ;;
+  bootstrap)
+    # the standard ARGUS PKI in one go: CA, broker, reverse proxy, api client, 4 simulated nodes + hero
+    "$0" init
+    "$0" server mosquitto "DNS:mosquitto,DNS:host.wokwi.internal,$STD_SERVER_SANS"
+    "$0" server outpost "$STD_SERVER_SANS"
+    "$0" client argus-api
+    for n in sentinel-01 sentinel-02 sentinel-03 sentinel-04 sentinel-hero; do "$0" device "$n" >/dev/null; done
+    echo "PKI ready (firmware secrets written for the last node: sentinel-hero)"
+    ;;
   *) sed -n '2,10p' "$0"; exit 1 ;;
 esac
