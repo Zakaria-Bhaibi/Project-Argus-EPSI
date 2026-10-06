@@ -29,11 +29,14 @@ export function threatState(nodes, series, events, nowS) {
   for (const id of Object.keys(NODE_INFO)) {
     const last = nodes[id]?.last
     const b = baseline(id, series[id])
-    const tempC = last?.temp_c ?? null
-    const gasPpm = last?.gas_ppm ?? null
+    // median of the last 5 readings: one noisy sample (the emulated MQ-2 is noisy) can't raise a hazard
+    const recent = (series[id] || []).slice(-5)
+    const tempC = median(recent.map((p) => p.temp_c).filter((v) => v != null)) ?? last?.temp_c ?? null
+    const gasPpm = median(recent.map((p) => p.gas_ppm).filter((v) => v != null)) ?? last?.gas_ppm ?? null
     // visual intensity only (the alarms themselves come from the AI): +2 °C starts glowing, +12 °C is full
     const heat = tempC != null && b.temp != null ? clamp01((tempC - b.temp - 2) / 10) : 0
-    const gas = gasPpm != null && b.gas != null ? clamp01((gasPpm - b.gas - 60) / 600) : 0
+    // a real leak climbs +150 ppm within ~15 s; the overheat's slow gas drift stays below it
+    const gas = gasPpm != null && b.gas != null ? clamp01((gasPpm - b.gas - 150) / 600) : 0
 
     // an intrusion "episode": consecutive intrusion events less than 20 s apart; `since` anchors the walk
     let intruder = null

@@ -43,6 +43,10 @@ function Console() {
     const t = setTimeout(() => setDrill(null), DRILL_S * 1000)
     return () => clearTimeout(t)
   }, [drill])
+  // Clean slate: the view reacts only to events since this login or the last "All clear".
+  // Nothing is deleted; the timeline can still show earlier events on demand.
+  const [clearedAt, setClearedAt] = useState(() => Date.now() / 1000)
+  const events = useMemo(() => s.events.filter((e) => e.ts >= clearedAt), [s.events, clearedAt])
   const startDrill = () => setDrill({ startedAt: Date.now() / 1000 })
   const stopDrill = () => setDrill(null)
 
@@ -60,14 +64,14 @@ function Console() {
   }, [selected])
 
   const threats = useMemo(
-    () => Object.fromEntries(Object.keys(NODE_INFO).map((id) => [id, recentThreat(s.events, id)])),
+    () => Object.fromEntries(Object.keys(NODE_INFO).map((id) => [id, recentThreat(events, id)])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.events, Math.floor(now / 2000)],
+    [events, Math.floor(now / 2000)],
   )
   const threatFx = useMemo(
-    () => threatState(s.nodes, s.series, s.events, now / 1000),
+    () => threatState(s.nodes, s.series, events, now / 1000),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.nodes, s.series, s.events, Math.floor(now / 1000)],
+    [s.nodes, s.series, events, Math.floor(now / 1000)],
   )
   // which alarm should be sounding right now (highest priority wins)
   const alarm = useMemo(() => {
@@ -75,12 +79,12 @@ function Console() {
     const nowS = now / 1000
     const active = {
       intrusion: t.some((x) => x.intruder),
-      cyber: !!drill || s.events.some((e) => e.category === 'cyber' && e.severity === 'critical' && nowS - e.ts < 8),
+      cyber: !!drill || events.some((e) => e.category === 'cyber' && e.severity === 'critical' && nowS - e.ts < 8),
       gas: t.some((x) => x.gas > 0.02),
       heat: t.some((x) => x.heat > 0.02),
     }
     return ALARM_PRIORITY.find((k) => active[k]) ?? null
-  }, [threatFx, drill, s.events, now])
+  }, [threatFx, drill, events, now])
   const [soundOn, setSoundOn] = useState(() => {
     try { return localStorage.getItem('argus.sound') === 'on' } catch { return false }
   })
@@ -117,9 +121,9 @@ function Console() {
 
       <main className="grid">
         <section className="twin" aria-label="Site map">
-          <Situation events={s.events} now={now} />
+          <Situation events={events} now={now} />
           <DrillBanner drill={drill} />
-          <SiteTwin nodes={s.nodes} threats={threats} threatFx={threatFx} events={s.events} drill={drill} selected={selected} onSelect={setSelected} />
+          <SiteTwin nodes={s.nodes} threats={threats} threatFx={threatFx} events={events} drill={drill} selected={selected} onSelect={setSelected} />
           <ul className="legend" aria-label="Map legend">
             <li><i className="dot dot-online" />Reporting</li>
             <li><i className="dot dot-down" />Silent</li>
@@ -129,10 +133,10 @@ function Console() {
             <li><i className="dot dot-packet" />Message in flight</li>
           </ul>
         </section>
-        <Timeline events={s.events} onSelectNode={setSelected} />
+        <Timeline events={events} allEvents={s.events} onSelectNode={setSelected} />
         <NodePanel id={selected} node={s.nodes[selected]} series={s.series[selected]} traffic={s.traffic[selected]} />
-        <Controls id={selected} node={s.nodes[selected]} onSelect={setSelected} drill={drill} onStartDrill={startDrill} onStopDrill={stopDrill} />
-        <CameraFeed nodes={s.nodes} threats={threats} threatFx={threatFx} events={s.events} drill={drill} />
+        <Controls id={selected} node={s.nodes[selected]} onSelect={setSelected} drill={drill} onStartDrill={startDrill} onStopDrill={stopDrill} onAllClear={() => setClearedAt(Date.now() / 1000)} />
+        <CameraFeed nodes={s.nodes} threats={threats} threatFx={threatFx} events={events} drill={drill} />
       </main>
       <p className="sr-only" aria-live="polite">{selected ? `Showing ${nodeLabel(selected)}` : ''}</p>
     </div>

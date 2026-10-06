@@ -17,7 +17,9 @@ function ago(ts) {
   return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function Timeline({ events, onSelectNode }) {
+export default function Timeline({ events: current, allEvents, onSelectNode }) {
+  const [history, setHistory] = useState(false)
+  const events = history ? allEvents : current
   const [shown, setShown] = useState({ environmental: true, intrusion: true, cyber: true, system: false })
   const counts = Object.fromEntries(FILTERS.map((f) => [f.id, events.filter((e) => e.category === f.id).length]))
   const visible = events.filter((e) => shown[e.category])
@@ -26,6 +28,9 @@ export default function Timeline({ events, onSelectNode }) {
     <section className="panel timeline" aria-label="Threat timeline">
       <header className="panel-head">
         <h2>Threat timeline</h2>
+        <button className="link" aria-pressed={history} onClick={() => setHistory((h) => !h)}>
+          {history ? 'Since all clear' : 'Show earlier'}
+        </button>
         <div className="filters" role="group" aria-label="Show categories">
           {FILTERS.map((f) => (
             <button key={f.id} className={`chip chip-${f.id}`} aria-pressed={shown[f.id]}
@@ -36,7 +41,7 @@ export default function Timeline({ events, onSelectNode }) {
         </div>
       </header>
       <ol className="events">
-        {visible.length === 0 && <li className="empty">Nothing yet. Alerts from sensors, the camera and the network appear here as they happen.</li>}
+        {visible.length === 0 && <li className="empty">All clear. Alerts from sensors, the camera and the network appear here as they happen.</li>}
         {visible.map((e) => {
           const node = e.data?.node
           return (

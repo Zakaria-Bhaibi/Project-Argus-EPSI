@@ -259,3 +259,18 @@ def test_sensor_window_is_reset_after_a_gap():
     assert len(sc.windows.buf["n"]) == 14
     sc.update("n", r, ts=1000 + 2 * 14 + 60)       # one minute of silence: start over
     assert len(sc.windows.buf["n"]) == 1
+
+
+def test_traffic_model_learns_a_slow_nodes_own_rate():
+    # regression: the Wokwi ESP32 runs at ~half speed (2 msgs/10 s) and was flagged every bucket
+    sys.path.insert(0, str(ROOT / "ai/anomaly"))
+    from scorer import TrafficScorer
+    now = [0.0]
+    t = TrafficScorer(clock=lambda: now[0])
+    def bucket(n, size=250):
+        for _ in range(n):
+            t.observe("slow", size, "telemetry", False)
+        now[0] += 11
+        return [a for node, _, a, _ in t.flush_if_due() if node == "slow"][0]
+    assert [bucket(2) for _ in range(8)] == [False] * 8       # its own rate is its normal
+    assert bucket(200) is True                                 # a flood is still a flood

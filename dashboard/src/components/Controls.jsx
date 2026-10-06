@@ -14,7 +14,7 @@ const INCIDENTS = [
 ]
 const CONFIRM_TIMEOUT_MS = 6000
 
-export default function Controls({ id, node, onSelect, drill, onStartDrill, onStopDrill }) {
+export default function Controls({ id, node, onSelect, drill, onStartDrill, onStopDrill, onAllClear }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState(null)       // { ok, text }
   const [pending, setPending] = useState(null) // { action, value, node } waiting for the node's ack
@@ -79,6 +79,7 @@ export default function Controls({ id, node, onSelect, drill, onStartDrill, onSt
       ].map((p) => p.catch(() => null))))
       setActive({})
       if (drill) onStopDrill()
+      onAllClear()
       setNote({ ok: true, text: 'All clear: scenarios stopped, sirens off, lights green' })
     } finally {
       setBusy(false)

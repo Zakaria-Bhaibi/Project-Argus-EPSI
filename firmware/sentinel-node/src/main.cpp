@@ -125,7 +125,12 @@ static void calibrateGasStep() {
 }
 
 static float readGasPpm() {
-  float ratio = gasResistance() / gasR0;  // Rs/R0, falls as gas rises
+  // exponential moving average: the emulated ADC jumps ±300 counts between reads with nothing
+  // changing, and the log-log curve amplifies that into fake spikes. A real leak still shows in ~3 reads.
+  static float rsAvg = 0;
+  float rs = gasResistance();
+  rsAvg = rsAvg == 0 ? rs : rsAvg + 0.35f * (rs - rsAvg);
+  float ratio = rsAvg / gasR0;  // Rs/R0, falls as gas rises
   return GAS_CLEAN_PPM * powf(ratio, 1.0f / GAS_SLOPE);
 }
 

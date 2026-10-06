@@ -21,6 +21,7 @@ class NodeModel:
     base_gas: float = 180.0      # ppm, MQ-2 clean-air baseline
     t: float = 0.0               # seconds since start
     scenario: str = "normal"
+    overheat_rate: float = 0.05  # °C/s; ai/anomaly/train.py evaluates with this slow, hard-to-spot rate
     scenario_t: float = 0.0      # seconds since the scenario started
     _pir_until: float = -1.0
     _stuck_value: float | None = None
@@ -49,9 +50,10 @@ class NodeModel:
             hum += 2.0 * (1 - math.exp(-st / 120.0))
         elif s == "overheat":
             # the brief's example: slow temperature rise correlated with a gas micro-deviation
-            temp += 0.05 * st
-            gas += 0.35 * st + r.gauss(0, 2.0)
-            hum -= 0.03 * st
+            k = self.overheat_rate / 0.05
+            temp += self.overheat_rate * st
+            gas += 0.35 * st + r.gauss(0, 2.0)      # micro-deviation: never reaches leak level
+            hum -= 0.03 * k * st
         elif s == "intruder":
             if self.t > self._pir_until and r.random() < 0.35:
                 self._pir_until = self.t + r.uniform(2, 8)

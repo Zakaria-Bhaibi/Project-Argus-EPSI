@@ -81,6 +81,20 @@ class TrafficScorer:
         self._start = clock()
         self._cur: dict[str, dict] = defaultdict(lambda: {"msgs": 0, "bytes": 0, "rejected": 0, "types": set()})
         self._grace: dict[str, int] = {}
+        self._hist: dict[str, list] = defaultdict(list)
+
+    REF_MSGS, REF_BYTES = 5.0, 215.0   # what the model was trained on (simulated node, 2 s period)
+
+    def _relative(self, node: str, stats: dict) -> dict:
+        """Rescale to the node's own normal rate/size: a slower node (e.g. an ESP32 emulated at half
+        real-time speed, or a real device with another period) is judged against itself."""
+        h = self._hist[node]
+        if len(h) < 3:
+            return stats
+        base_msgs = max(1.0, float(np.median([m for m, _ in h])))
+        base_bytes = max(1.0, float(np.median([b for _, b in h])))
+        return {**stats, "msgs": stats["msgs"] * self.REF_MSGS / base_msgs,
+                "mean_bytes": stats["mean_bytes"] * self.REF_BYTES / base_bytes}
 
     def grace(self, node: str, buckets: int = 2) -> None:
         """A (re)booting node sends a legit burst (status + boot + backlog): don't score it as a flood.
@@ -109,7 +123,15 @@ class TrafficScorer:
                     continue
             stats = {"msgs": b["msgs"], "mean_bytes": b["bytes"] / max(b["msgs"], 1),
                      "rejected": b["rejected"], "distinct_types": len(b["types"])}
-            s = self.inner.score(traffic_vector(stats))
-            out.append((node, s, s >= self.inner.threshold, stats))
+            s = self.inner.score(traffic_vector(self._relative(node, stats)))
+            h = self._hist[node]
+            learning = len(h) < 3
+            obvious_attack = stats["rejected"] > 0 or stats["msgs"] >= 30
+            anomaly = s >= self.inner.threshold and (not learning or obvious_attack)
+            # only normal buckets teach the node's baseline, so a flood can't poison it
+            if not anomaly and not obvious_attack:
+                h.append((stats["msgs"], stats["mean_bytes"]))
+                del h[:-12]
+            out.append((node, s, anomaly, stats))
         self._cur.clear()
         return out

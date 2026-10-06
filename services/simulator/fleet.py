@@ -30,7 +30,8 @@ log = logging.getLogger("fleet")
 class VirtualNode:
     def __init__(self, node_id: str, key: bytes, pki: Path, host: str, port: int, interval: float):
         self.id, self.key, self.interval = node_id, key, interval
-        self.model = NodeModel(node_id, rng=random.Random(node_id))
+        # demo pace: the Overheat button should visibly heat up within ~10 s (+0.2 °C/s)
+        self.model = NodeModel(node_id, rng=random.Random(node_id), overheat_rate=float(os.environ.get("OVERHEAT_RATE", "0.2")))
         self.verifier = proto.Verifier({node_id: key})
         self.actuators = {"buzzer": False, "led": "green", "display": ""}
         self._last_pir = False
