@@ -21,12 +21,11 @@
 	}
 
 	header {
-		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 		Referrer-Policy no-referrer
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
-		Content-Security-Policy "default-src 'self'; connect-src 'self' wss:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; connect-src 'self' wss:; img-src 'self' data: blob: http://127.0.0.1:8081; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'"
 		-Server
 	}
 

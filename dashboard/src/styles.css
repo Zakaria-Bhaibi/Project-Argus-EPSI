@@ -55,29 +55,35 @@ button, input { font: inherit; color: inherit; }
 .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 
 /* ---------------------------------------------------------------- twin (the hero) */
-.twin { position: relative; overflow: hidden; }
+/* The map is a night viewport set into the light console: the one dark, glowing element on the page. */
+.twin { position: relative; overflow: hidden; background: #0A141C; border-color: #0A141C;
+  --night-text: #E6EEF3; --night-muted: #9DB0BE;
+  --n-ok: #3DDC97; --n-env: #F5B524; --n-intr: #FF4D8D; --n-cyber: #8FA5FF; --n-down: #E05A6A; }
 .twin canvas { touch-action: none; }
 .situation {
   position: absolute; z-index: 3; top: 14px; left: 18px; right: 18px; margin: 0;
   font: 700 clamp(22px, 2.3vw, 34px)/1.1 var(--display); max-width: 30ch; pointer-events: none;
-  right: auto; background: rgba(246, 248, 249, 0.9); padding: 4px 10px 6px 8px; border-radius: 2px;
+  right: auto; background: rgba(10, 20, 28, 0.72); padding: 4px 10px 6px 8px; border-radius: 2px;
 }
-.situation.is-clear { color: var(--ok); }
-.situation.cat-environmental { color: var(--env); }
-.situation.cat-intrusion { color: var(--intr); }
-.situation.cat-cyber { color: var(--cyber); }
-.legend { position: absolute; z-index: 2; left: 18px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--ink-2); }
+.situation.is-clear { color: var(--n-ok); }
+.situation.cat-environmental { color: var(--n-env); }
+.situation.cat-intrusion { color: var(--n-intr); }
+.situation.cat-cyber { color: var(--n-cyber); }
+.legend { position: absolute; z-index: 2; left: 18px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 4px 8px; list-style: none; font-size: 13px; color: var(--night-muted); background: rgba(10, 20, 28, 0.6); border-radius: 2px; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
-.dot-online { background: var(--ok); } .dot-down { background: var(--down); }
-.dot-environmental { background: var(--env); } .dot-intrusion { background: var(--intr); } .dot-cyber { background: var(--cyber); }
+.dot-online { background: var(--n-ok); } .dot-down { background: var(--n-down); }
+.dot-environmental { background: var(--n-env); } .dot-intrusion { background: var(--n-intr); } .dot-cyber { background: var(--n-cyber); }
+.dot-packet { background: #8BE9FF; }
 
 .pin-labels { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
 .pin-label {
   position: absolute; top: 0; left: 0; pointer-events: auto; will-change: transform;
   display: flex; flex-direction: column; align-items: center; white-space: nowrap; cursor: pointer;
-  background: rgba(246, 248, 249, 0.92); border: 1px solid var(--ink); border-radius: 2px; padding: 3px 8px;
+  background: rgba(10, 20, 28, 0.78); color: var(--night-text); border: 1px solid rgba(127, 179, 213, 0.55);
+  border-radius: 2px; padding: 3px 8px;
 }
-.pin-label.is-selected { background: var(--ink); color: var(--paper); }
+.pin-label:hover { border-color: var(--night-text); }
+.pin-label.is-selected { background: var(--night-text); color: #0A141C; border-color: var(--night-text); }
 .pin-name { font: 700 15px/1.1 var(--display); }
 .pin-value { font-size: 12px; font-variant-numeric: tabular-nums; }
 

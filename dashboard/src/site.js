@@ -10,11 +10,12 @@ export const NODE_INFO = {
 }
 
 export const STRUCTURES = [
-  { kind: 'box', pos: [-11, 0, -6], size: [9, 4, 6] },      // turbine hall
+  { kind: 'box', pos: [-11, 0, -6], size: [9, 4, 6], windows: 4 },   // turbine hall
   { kind: 'tank', pos: [13, 0, -8], r: 2.2, h: 5 },          // gas tanks
   { kind: 'tank', pos: [16.5, 0, -4], r: 1.6, h: 4 },
-  { kind: 'box', pos: [9, 0, 14], size: [6, 2.5, 4] },       // battery containers
-  { kind: 'box', pos: [0, 0, 9], size: [4, 2.6, 3] },        // control hut
+  { kind: 'box', pos: [7, 0, 14], size: [3, 2.5, 5] },       // battery containers
+  { kind: 'box', pos: [10.5, 0, 14], size: [3, 2.5, 5] },
+  { kind: 'box', pos: [0, 0, 9], size: [4, 2.6, 3], windows: 2 },   // control hut
   { kind: 'mast', pos: [-4, 0, 2], h: 12 },                  // comms mast
 ]
 

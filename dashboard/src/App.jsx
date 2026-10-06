@@ -65,13 +65,14 @@ function Console() {
       <main className="grid">
         <section className="twin" aria-label="Site map">
           <Situation events={s.events} now={now} />
-          <SiteTwin nodes={s.nodes} threats={threats} selected={selected} onSelect={setSelected} />
+          <SiteTwin nodes={s.nodes} threats={threats} events={s.events} selected={selected} onSelect={setSelected} />
           <ul className="legend" aria-label="Map legend">
             <li><i className="dot dot-online" />Reporting</li>
             <li><i className="dot dot-down" />Silent</li>
             <li><i className="dot dot-environmental" />Environmental alert</li>
             <li><i className="dot dot-intrusion" />Intrusion alert</li>
             <li><i className="dot dot-cyber" />Cyber alert</li>
+            <li><i className="dot dot-packet" />Message in flight</li>
           </ul>
         </section>
         <Timeline events={s.events} onSelectNode={setSelected} />
