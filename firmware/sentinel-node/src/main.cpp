@@ -8,6 +8,7 @@
 #include <WiFiClientSecure.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <esp_sntp.h>
 #include <mbedtls/md.h>
 #include <sys/time.h>
 #include <time.h>
@@ -185,6 +186,9 @@ static void drawOled(const char *line) {
 static void connectWifi() {
   WiFi.begin("Wokwi-GUEST", "", 6);
   while (WiFi.status() != WL_CONNECTED) { drawOled("WiFi..."); delay(250); }
+  // re-sync every 15 s (the minimum): an emulated ESP32 (Wokwi) can run at ~half real-time speed, so its
+  // clock falls behind and messages would fail the server's 30 s freshness check (anti-replay)
+  sntp_set_sync_interval(15000);
   configTime(0, 0, "pool.ntp.org", "time.google.com");
   drawOled("NTP sync...");
   while (time(nullptr) < 1700000000) delay(200);  // signatures need a real clock (anti-replay)

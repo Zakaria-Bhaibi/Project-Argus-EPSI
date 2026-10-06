@@ -43,6 +43,9 @@ SIGNAL_WORDS = {"pir": "motion", "camera_person": "a person on camera", "sensor_
                 "cyber": "a network attack", "decoy": "a decoy hit"}
 
 
+ANOMALY_STREAK = 3
+
+
 class Correlator:
     """Fuses signals from all sources within a time window into escalating incidents.
 
@@ -80,6 +83,7 @@ class Pipeline:
         self.nodes: dict[str, dict] = {n: {"id": n, "status": "unknown", "last": None, "anomaly": None,
                                            "last_seen": None, "actuators": {}} for n in keys}
         self.emit: Callable[[dict], None] = lambda msg: None
+        self._anomaly_streak: dict[str, int] = {}
         self.send_command: Callable[[str, str, object], bool] | None = None   # set when MQTT is up
         self._lock = threading.RLock()  # re-entrant: events are raised from inside handlers
         self.sensor_scorer = self.traffic_scorer = None
@@ -165,8 +169,10 @@ class Pipeline:
             r = self.sensor_scorer.update(m.node, reading, ts=m.ts)
             if r:
                 score, is_anomaly = r
-                prev = self.nodes[m.node]["anomaly"]
-                if is_anomaly and (prev is None or prev < self.sensor_scorer.inner.threshold):
+                # 3 abnormal windows in a row (6 s) before alerting: a lone outlier window is noise
+                streak = self._anomaly_streak.get(m.node, 0) + 1 if is_anomaly else 0
+                self._anomaly_streak[m.node] = streak
+                if streak == ANOMALY_STREAK:
                     self.event("environmental", "warning", m.node, "sensor_anomaly",
                                f"abnormal sensor dynamics on {m.node} (score {score:.2f})",
                                {"node": m.node, "score": round(score, 3), **reading})

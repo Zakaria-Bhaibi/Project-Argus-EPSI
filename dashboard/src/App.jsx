@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useState } from 'react'
 import { connectLive, getEvents, getTelemetry, session } from './api.js'
 import { initialState, recentThreat, reducer } from './state.js'
 import { threatState } from './threats.js'
+import { ALARM_PRIORITY, unlockAudio, useAlarmSound } from './sound.js'
 import { NODE_INFO, SITE, nodeLabel } from './site.js'
 import Login from './components/Login.jsx'
 import SiteTwin from './components/SiteTwin.jsx'
@@ -68,6 +69,35 @@ function Console() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [s.nodes, s.series, s.events, Math.floor(now / 1000)],
   )
+  // which alarm should be sounding right now (highest priority wins)
+  const alarm = useMemo(() => {
+    const t = Object.values(threatFx)
+    const nowS = now / 1000
+    const active = {
+      intrusion: t.some((x) => x.intruder),
+      cyber: !!drill || s.events.some((e) => e.category === 'cyber' && e.severity === 'critical' && nowS - e.ts < 8),
+      gas: t.some((x) => x.gas > 0.02),
+      heat: t.some((x) => x.heat > 0.02),
+    }
+    return ALARM_PRIORITY.find((k) => active[k]) ?? null
+  }, [threatFx, drill, s.events, now])
+  const [soundOn, setSoundOn] = useState(() => {
+    try { return localStorage.getItem('argus.sound') === 'on' } catch { return false }
+  })
+  const toggleSound = () => {
+    const next = !soundOn
+    if (next) unlockAudio()            // needs this click: browsers block audio until a user gesture
+    setSoundOn(next)
+    try { localStorage.setItem('argus.sound', next ? 'on' : 'off') } catch { /* private mode */ }
+  }
+  // a saved "on" still needs one click on the page to unlock audio after a reload
+  useEffect(() => {
+    if (!soundOn) return
+    const unlock = () => unlockAudio()
+    window.addEventListener('pointerdown', unlock, { once: true })
+    return () => window.removeEventListener('pointerdown', unlock)
+  }, [soundOn])
+  useAlarmSound(alarm, soundOn)
   const nodes = Object.values(s.nodes)
   const online = nodes.filter((n) => n.status === 'online').length
 
@@ -78,6 +108,9 @@ function Console() {
         <span className="site">{SITE.name}, {SITE.region}</span>
         <span className={`fleet ${online < nodes.length ? 'is-degraded' : ''}`}>{online} of {nodes.length} nodes reporting</span>
         <span className={`link link-${s.link}`}>{s.link === 'live' ? 'Live' : 'Reconnecting…'}</span>
+        <button className={`btn btn-quiet sound${soundOn ? ' is-on' : ''}`} aria-pressed={soundOn} onClick={toggleSound}>
+          {soundOn ? (alarm ? '🔊 Alarm sounding' : '🔊 Sound on') : '🔇 Sound off'}
+        </button>
         <time className="clock">{new Date(now).toLocaleTimeString()}</time>
         <button className="btn btn-quiet" onClick={() => { session.clear(); location.reload() }}>Sign out</button>
       </header>

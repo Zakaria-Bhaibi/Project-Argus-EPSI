@@ -92,7 +92,6 @@ button, input { font: inherit; color: inherit; }
   display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 28px 16px; border-radius: 4px;
   pointer-events: none; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12); }
 .drill-text { display: inline-flex; align-items: center; gap: 12px; font: 700 clamp(26px, 3vw, 42px)/1.1 var(--display); }
-.drill-tag { font: 600 11px/1 var(--text); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
 .drill-attack { background: rgba(200, 20, 50, 0.92); color: #fff; }
 .drill-defend { background: rgba(245, 181, 36, 0.94); color: #1B1A0A; }
 .drill-blocked { background: rgba(46, 160, 110, 0.94); color: #fff; }
@@ -170,6 +169,7 @@ input { border: 1px solid var(--rule); border-radius: var(--radius-ctl); padding
 .btn-danger { background: var(--intr); border-color: var(--intr); color: #fff; }
 .btn-danger:hover { background: #A3134C; }
 .btn-quiet { border-color: transparent; font-weight: 400; color: var(--ink-2); }
+.sound.is-on { color: var(--ink); font-weight: 600; }
 .seg { display: flex; flex-wrap: wrap; gap: 4px; }
 .seg-btn { border: 1px solid var(--rule); background: #fff; border-radius: var(--radius-ctl); padding: 4px 10px; cursor: pointer; font-size: 13px; }
 .seg-btn[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }

@@ -62,8 +62,6 @@ class NodeModel:
             if r.random() < 0.15:
                 gas += r.choice([-1, 1]) * r.uniform(300, 600)  # erratic MQ-2 spikes
 
-        if s == "normal" and r.random() < 0.01:            # rare legit motion (staff, animals)
-            self._pir_until = self.t + 2
         pir = self.t <= self._pir_until
 
         return {

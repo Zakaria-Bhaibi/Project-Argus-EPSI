@@ -20,7 +20,6 @@ export default function DrillBanner({ drill }) {
   const step = STEPS.find((s) => age < s.until) ?? STEPS[STEPS.length - 1]
   return (
     <div className={`drill drill-${step.kind}`} role="status" aria-live="assertive">
-      <span className="drill-tag">Simulation</span>
       <span className="drill-text"><b aria-hidden="true">{step.icon}</b>{step.text}</span>
     </div>
   )
