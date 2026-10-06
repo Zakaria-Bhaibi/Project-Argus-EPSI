@@ -228,3 +228,22 @@ def test_telemetry_without_gas_during_warmup_is_accepted(client):
     pts = client.get("/api/v1/telemetry?node=n1", headers=h).json()
     assert len(pts) == 1 and pts[0]["gas_ppm"] is None
     assert not [e for e in client.get("/api/v1/events?category=cyber", headers=h).json() if e["kind"] == "schema"]
+
+
+def test_command_to_offline_node_is_refused(client):
+    h = login(client, "op", "operator-pass")
+    r = client.post("/api/v1/nodes/n1/commands", json={"action": "buzzer", "value": True}, headers=h)
+    assert r.status_code == 409 and "can't receive commands" in r.json()["detail"]
+
+
+def test_camera_sighting_escalates_and_triggers_automatic_response(client):
+    p = client.pipeline
+    sent = []
+    p.send_command = lambda node, action, value: sent.append((node, action, value)) or True
+    p.nodes["n1"]["status"] = "online"
+    p.handle_mqtt(proto.topic("n1", "events"), proto.encode("n1", "event", {"kind": "pir", "value": True}, K1))
+    p.handle_mqtt(proto.topic("n1", "events"), proto.encode("n1", "event", {"kind": "camera", "confidence": 0.93}, K1))
+    h = login(client, "view", "viewer-pass")
+    kinds = [e["kind"] for e in client.get("/api/v1/events", headers=h).json()]
+    assert "person_in_zone" in kinds and "incident" in kinds and "auto_response" in kinds
+    assert ("n1", "led", "red") in sent

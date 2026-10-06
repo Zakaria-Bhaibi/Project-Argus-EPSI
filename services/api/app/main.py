@@ -99,6 +99,7 @@ def create_app(settings: Settings | None = None, start_background: bool = True) 
             from .mqtt_client import MqttLink
             link = MqttLink(settings, pipeline)
             link.start()
+            pipeline.send_command = link.send_command
         app.state.mqtt = link
         if start_background and settings.mosquitto_log:
             LogWatcher(settings.mosquitto_log, pipeline).start()
@@ -176,6 +177,9 @@ def create_app(settings: Settings | None = None, start_background: bool = True) 
     def command(node: str, body: Command, user=Depends(require("operator"))):
         if node not in pipeline.nodes:
             raise HTTPException(404, "unknown node")
+        if pipeline.nodes[node]["status"] != "online":
+            # don't pretend: a command to a node that isn't connected would silently go nowhere
+            raise HTTPException(409, f"{node} is {pipeline.nodes[node]['status']}: it can't receive commands right now")
         if not app.state.mqtt or not app.state.mqtt.send_command(node, body.action, body.value):
             raise HTTPException(503, "broker unavailable")
         pipeline.event("system", "info", "api", "command",

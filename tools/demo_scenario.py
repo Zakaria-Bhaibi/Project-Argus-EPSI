@@ -11,7 +11,8 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-API = os.environ.get("ARGUS_API", "https://localhost/api/v1")
+# not "localhost": Python tries IPv6 first, and WSL mirrored mode stalls that 21 s per request
+API = os.environ.get("ARGUS_API", "https://127.0.0.1/api/v1")
 CTX = ssl.create_default_context(cafile=str(ROOT / "infra/pki/out/ca.crt"))
 SIMULATED = ["sentinel-01", "sentinel-02", "sentinel-03", "sentinel-04"]
 

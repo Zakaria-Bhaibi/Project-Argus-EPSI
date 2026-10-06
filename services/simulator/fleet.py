@@ -8,7 +8,6 @@ Env:
 """
 from __future__ import annotations
 
-import json
 import logging
 import os
 import random
@@ -35,6 +34,7 @@ class VirtualNode:
         self.verifier = proto.Verifier({node_id: key})
         self.actuators = {"buzzer": False, "led": "green", "display": ""}
         self._last_pir = False
+        self._last_cam = 0.0
 
         c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=node_id, protocol=mqtt.MQTTv311)
         c.tls_set(ca_certs=str(pki / "ca.crt"), certfile=str(pki / node_id / f"{node_id}.crt"),
@@ -90,6 +90,10 @@ class VirtualNode:
         if reading["pir"] and not self._last_pir:
             self.event("pir", {"value": True})
         self._last_pir = reading["pir"]
+        # simulated site camera: confirms the person a moment after the motion sensor, every ~6 s
+        if self.model.scenario == "intruder" and reading["pir"] and time.time() - self._last_cam > 6:
+            self._last_cam = time.time()
+            self.event("camera", {"confidence": round(random.uniform(0.86, 0.97), 2)})
 
     def stop(self) -> None:
         self.client.publish(proto.topic(self.id, "status"), "offline", qos=1, retain=True).wait_for_publish(2)

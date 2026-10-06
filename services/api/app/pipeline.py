@@ -80,6 +80,7 @@ class Pipeline:
         self.nodes: dict[str, dict] = {n: {"id": n, "status": "unknown", "last": None, "anomaly": None,
                                            "last_seen": None, "actuators": {}} for n in keys}
         self.emit: Callable[[dict], None] = lambda msg: None
+        self.send_command: Callable[[str, str, object], bool] | None = None   # set when MQTT is up
         self._lock = threading.RLock()  # re-entrant: events are raised from inside handlers
         self.sensor_scorer = self.traffic_scorer = None
         try:
@@ -191,6 +192,13 @@ class Pipeline:
             if self.traffic_scorer:
                 self.traffic_scorer.grace(m.node)
             self.event("system", "info", m.node, "boot", f"{m.node} booted", {"node": m.node, **m.data})
+        elif kind == "camera":
+            conf = m.data.get("confidence")
+            conf = round(float(conf), 2) if isinstance(conf, (int, float)) else None
+            self.event("intrusion", "warning", m.node, "person_in_zone",
+                       f"person seen by the camera near {m.node}" + (f" ({conf:.2f})" if conf else ""),
+                       {"node": m.node, "confidence": conf})
+            self._correlate(m.node, "camera_person")
         elif kind == "tamper":
             self.event("intrusion", "critical", m.node, "tamper", f"tamper detected on {m.node}", {"node": m.node})
             self._correlate(m.node, "pir")
@@ -237,6 +245,18 @@ class Pipeline:
                        "correlation", "incident",
                        f"{'Critical' if level == 'critical' else 'Warning'}: {what} at {node}",
                        {"node": node, "score": score, "signals": active})
+            self._auto_respond(node, level)
+
+    def _auto_respond(self, node: str, level: str) -> None:
+        """Automatic response on the node itself: red light on a warning, red light + siren on a critical."""
+        if self.send_command is None or self.nodes.get(node, {}).get("status") != "online":
+            return
+        actions = [("led", "red")] + ([("buzzer", True)] if level == "critical" else [])
+        for action, value in actions:
+            self.send_command(node, action, value)
+        self.event("system", "info", "argus", "auto_response",
+                   f"automatic response at {node}: " + ("red light and siren" if level == "critical" else "red light"),
+                   {"node": node, "level": level})
 
     # ---- commands ------------------------------------------------------------------------------
     def sign_command(self, node: str, action: str, value) -> bytes:

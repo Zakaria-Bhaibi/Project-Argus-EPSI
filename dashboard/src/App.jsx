@@ -98,7 +98,7 @@ function Console() {
         </section>
         <Timeline events={s.events} onSelectNode={setSelected} />
         <NodePanel id={selected} node={s.nodes[selected]} series={s.series[selected]} traffic={s.traffic[selected]} />
-        <Controls key={selected} id={selected} node={s.nodes[selected]} drill={drill} onStartDrill={startDrill} onStopDrill={stopDrill} />
+        <Controls id={selected} node={s.nodes[selected]} onSelect={setSelected} drill={drill} onStartDrill={startDrill} onStopDrill={stopDrill} />
         <CameraFeed nodes={s.nodes} threats={threats} threatFx={threatFx} events={s.events} drill={drill} />
       </main>
       <p className="sr-only" aria-live="polite">{selected ? `Showing ${nodeLabel(selected)}` : ''}</p>
