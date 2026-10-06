@@ -112,7 +112,7 @@ def forge(host, port):
     c.publish(proto.topic("sentinel-02", "telemetry"), proto.encode("sentinel-02", "telemetry", {**READING, "gas_ppm": 5000}, k1), qos=1)
     time.sleep(1); c.disconnect(); c.loop_stop()
     result("impersonate another node", True, "mosquitto ACL drops it (topic not owned by the cert CN); HMAC would reject it anyway",
-           {"acl_denied", "identity_mismatch", "bad_signature"}, t0)
+           {"acl_denied", "session_takeover", "identity_mismatch", "bad_signature"}, t0)
 
 
 def tamper(host, port):

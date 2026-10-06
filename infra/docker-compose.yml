@@ -1,4 +1,6 @@
 # ARGUS Outpost stack: runs inside the hardened "Outpost" Linux VM (inner layer).
+# (build-time only: images are built on the host network because WSL mirrored networking + the
+# docker bridge drops connections during npm installs. Running containers stay on their own networks.)
 #   cd infra && sudo ./setup-runtime.sh && docker compose up -d --build
 # Profiles:  --profile sim (simulated fleet inside the VM, single-laptop mode)
 #            --profile detect (CrowdSec log analysis; ban enforcement = host firewall bouncer)
@@ -48,16 +50,16 @@ services:
     <<: *hardening
     image: eclipse-mosquitto:2.0
     user: "1883:1883"
+    # log file readable by the api's log watcher (group 1883), nobody else
+    entrypoint: ["sh", "-c", "touch /mosquitto/log/mosquitto.log && chmod 0640 /mosquitto/log/mosquitto.log && exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf"]
     ports: ["8883:8883"]
     networks: [edge_net, core_net]
     volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - ./mosquitto/acl.conf:/mosquitto/config/acl.conf:ro
+      - ./runtime/mosquitto-config:/mosquitto/config:ro    # owned by uid 1883, mode 0700 (setup-runtime.sh)
       - ./runtime/mosquitto:/mosquitto/certs:ro
       - mosq_data:/mosquitto/data
       - mosq_log:/mosquitto/log
-    deploy: { resources: { limits: { memory: 128m, cpus: "0.5" } } }
-    pids_limit: 64
+    deploy: { resources: { limits: { memory: 128m, cpus: "0.5", pids: 64 } } }
 
   postgres:
     <<: *hardening
@@ -74,12 +76,11 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U argus -d argus"]
       interval: 10s
-    deploy: { resources: { limits: { memory: 256m, cpus: "1.0" } } }
-    pids_limit: 100
+    deploy: { resources: { limits: { memory: 256m, cpus: "1.0", pids: 100 } } }
 
   api:
     <<: *hardening
-    build: { context: .., dockerfile: services/api/Dockerfile }
+    build: { context: .., dockerfile: services/api/Dockerfile, network: host }
     networks: [core_net, ops_net, decoy_net]
     depends_on:
       postgres: { condition: service_healthy }
@@ -95,17 +96,18 @@ services:
       MOSQUITTO_LOG: /mosquitto/log/mosquitto.log
       CAMERA_NODE: sentinel-hero
     secrets: [jwt_secret, service_tokens, users, devices, db_password]
+    group_add: ["1883"]   # read-only access to the mosquitto log (security events from the broker)
     # build the DB URL from the password secret without ever putting it in an env var
     entrypoint: ["sh", "-c", "echo \"postgresql+psycopg://argus:$$(cat /run/secrets/db_password)@postgres:5432/argus\" > /tmp/database_url && DATABASE_URL_FILE=/tmp/database_url exec uvicorn app.main:app --app-dir services/api --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips 172.20.30.0/24"]
     volumes:
       - ./runtime/api-pki:/run/pki:ro
       - mosq_log:/mosquitto/log:ro
-    deploy: { resources: { limits: { memory: 512m, cpus: "1.5" } } }
-    pids_limit: 128
+    deploy: { resources: { limits: { memory: 512m, cpus: "1.5", pids: 128 } } }
 
   caddy:
     <<: *hardening
-    build: { context: .., dockerfile: infra/caddy/Dockerfile }
+    build: { context: .., dockerfile: infra/caddy/Dockerfile, network: host }
+    cap_add: [NET_BIND_SERVICE]   # the caddy binary carries this file capability; exec fails without it
     ports: ["443:8443"]
     networks: [ops_net, edge_net]
     depends_on: [api]
@@ -115,26 +117,24 @@ services:
       - caddy_data:/data
       - caddy_config:/config
       - caddy_log:/var/log/caddy
-    deploy: { resources: { limits: { memory: 128m, cpus: "0.5" } } }
-    pids_limit: 64
+    deploy: { resources: { limits: { memory: 128m, cpus: "0.5", pids: 64 } } }
 
   decoy:
     <<: *hardening
-    build: { context: ../services/decoy }
+    build: { context: ../services/decoy, network: host }
     ports: ["1883:1883", "2323:2323"]
     networks: [edge_net, decoy_net]
     environment:
       API_URL: http://api:8000/api/v1/alerts
       DECOY_TOKEN_FILE: /run/secrets/decoy_token
     secrets: [decoy_token]
-    deploy: { resources: { limits: { memory: 64m, cpus: "0.25" } } }
-    pids_limit: 32
+    deploy: { resources: { limits: { memory: 64m, cpus: "0.25", pids: 32 } } }
 
   # ------------------------------------------------------------- optional profiles
   simulator:
     <<: *hardening
     profiles: [sim]
-    build: { context: .., dockerfile: services/simulator/Dockerfile }
+    build: { context: .., dockerfile: services/simulator/Dockerfile, network: host }
     networks: [edge_net]
     environment:
       BROKER_HOST: mosquitto

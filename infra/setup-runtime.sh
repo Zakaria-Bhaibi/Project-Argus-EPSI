@@ -9,7 +9,7 @@ RT=runtime
 [[ -f $PKI/ca.crt ]] || { echo "no PKI in $PKI: run pki/pki.sh first (see README)"; exit 1; }
 [[ $EUID -eq 0 ]] || { echo "run as root (needs chown)"; exit 1; }
 
-mkdir -p $RT/secrets $RT/mosquitto $RT/api-pki/argus-api $RT/caddy $RT/sim-pki
+mkdir -p $RT/secrets $RT/mosquitto $RT/mosquitto-config $RT/api-pki/argus-api $RT/caddy $RT/sim-pki
 
 gen() { [[ -s "$1" ]] || openssl rand -hex 32 > "$1"; }   # keep existing secrets on re-run
 gen $RT/secrets/jwt_secret
@@ -17,13 +17,16 @@ gen $RT/secrets/db_password
 gen $RT/secrets/decoy_token
 gen $RT/secrets/vision_token
 # the API accepts the decoy and the vision script tokens
-paste -sd, $RT/secrets/decoy_token $RT/secrets/vision_token > $RT/secrets/service_tokens
+echo "$(cat $RT/secrets/decoy_token),$(cat $RT/secrets/vision_token)" > $RT/secrets/service_tokens
 cp $PKI/devices.json $RT/secrets/devices.json
 [[ -f $RT/secrets/users.json ]] || echo '{}' > $RT/secrets/users.json
 
 # mosquitto runs as uid 1883
 cp $PKI/ca.crt $PKI/ca.crl $PKI/mosquitto/mosquitto.crt $PKI/mosquitto/mosquitto.key $RT/mosquitto/
 chown -R 1883:1883 $RT/mosquitto && chmod 600 $RT/mosquitto/mosquitto.key
+# mosquitto 2.x warns (and future versions refuse) when its config/ACL is not private to it
+cp mosquitto/mosquitto.conf mosquitto/acl.conf $RT/mosquitto-config/
+chown -R 1883:1883 $RT/mosquitto-config && chmod 700 $RT/mosquitto-config && chmod 600 $RT/mosquitto-config/*
 
 # api runs as uid 10001
 cp $PKI/ca.crt $RT/api-pki/

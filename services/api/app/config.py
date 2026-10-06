@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -31,7 +32,8 @@ class Settings:
     jwt_secret: str = field(default_factory=lambda: _env("JWT_SECRET") or "")
     jwt_ttl_s: int = 8 * 3600
     users_file: Path | None = field(default_factory=lambda: Path(p) if (p := _env("USERS_FILE")) else None)
-    service_tokens: set[str] = field(default_factory=lambda: {t for t in (_env("SERVICE_TOKENS", "") or "").split(",") if t})
+    # comma- or newline-separated (a file with one token per line works too)
+    service_tokens: set[str] = field(default_factory=lambda: set(re.split(r"[,\s]+", _env("SERVICE_TOKENS", "") or "")) - {""})
     mosquitto_log: Path | None = field(default_factory=lambda: Path(p) if (p := _env("MOSQUITTO_LOG")) else None)
     models_dir: Path = field(default_factory=lambda: Path(_env("MODELS_DIR", str(ROOT / "ai/anomaly/models"))))
     camera_node: str = field(default_factory=lambda: _env("CAMERA_NODE", "sentinel-hero"))

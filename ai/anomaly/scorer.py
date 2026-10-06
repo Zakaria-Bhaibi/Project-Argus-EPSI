@@ -44,6 +44,7 @@ class SensorScorer:
 
 
 TRAFFIC_BUCKET_S = 10
+GRACE_MAX_MSGS = 20   # a reboot burst is ~10 msgs; anything bigger is scored even during grace
 TRAFFIC_FEATURES = ["msgs", "mean_bytes", "rejected", "distinct_types"]
 
 
@@ -71,7 +72,10 @@ class TrafficScorer:
         self._grace: dict[str, int] = {}
 
     def grace(self, node: str, buckets: int = 2) -> None:
-        """A (re)booting node sends a legit burst (status + boot + backlog): don't score it as a flood."""
+        """A (re)booting node sends a legit burst (status + boot + backlog): don't score it as a flood.
+
+        Capped at GRACE_MAX_MSGS: "boot" events come from the node itself, so a compromised node could
+        otherwise send fake boots to hide a flood (found by tools/redteam/attacks.py on the real stack)."""
         self._grace[node] = buckets
 
     def observe(self, node: str, size: int, msg_type: str, rejected: bool) -> None:
@@ -90,7 +94,8 @@ class TrafficScorer:
         for node, b in self._cur.items():
             if self._grace.get(node, 0) > 0:
                 self._grace[node] -= 1
-                continue
+                if b["msgs"] <= GRACE_MAX_MSGS:
+                    continue
             stats = {"msgs": b["msgs"], "mean_bytes": b["bytes"] / max(b["msgs"], 1),
                      "rejected": b["rejected"], "distinct_types": len(b["types"])}
             s = self.inner.score(traffic_vector(stats))

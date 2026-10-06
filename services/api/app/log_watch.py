@@ -20,6 +20,9 @@ RULES = [
      "TLS handshake rejected (no valid client certificate)"),
     (re.compile(r"Client (\S+) disconnected, not authori[sz]ed", re.I), "not_authorized", "warning",
      "client not authorized"),
+    # same certificate identity connecting twice: stolen cert / cloned node / session hijack
+    (re.compile(r"Client (\S+) already connected, closing old connection", re.I), "session_takeover", "critical",
+     "second connection with the same node identity (stolen certificate?)"),
     (re.compile(r"Denied PUBLISH from (\S+)", re.I), "acl_denied", "critical",
      "ACL denied a publish (node tried to write outside its topics)"),
     (re.compile(r"(protocol error|malformed packet)", re.I), "protocol_error", "warning",
@@ -37,6 +40,14 @@ class LogWatcher(threading.Thread):
         self.last_ip: str | None = None
 
     def run(self) -> None:
+        while True:  # the log may not exist yet or be unreadable for a moment: keep trying, never die
+            try:
+                self._follow()
+            except OSError as e:
+                log.error("cannot read %s (%s), retrying in 5 s", self.path, e)
+                time.sleep(5)
+
+    def _follow(self) -> None:
         while not self.path.exists():
             time.sleep(2)
         with self.path.open(errors="replace") as f:

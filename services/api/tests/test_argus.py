@@ -195,3 +195,26 @@ def test_traffic_model_flags_flood_but_not_reboot_burst():
     now[0] = 11
     flagged = {node: anomaly for node, _, anomaly, _ in t.flush_if_due()}
     assert flagged == {"normal": False, "flooder": True}
+
+
+def test_fake_boot_cannot_hide_a_flood():
+    # regression (found on the real stack): a compromised node sent "boot" to get a grace period
+    sys.path.insert(0, str(ROOT / "ai/anomaly"))
+    from scorer import TrafficScorer
+    now = [0.0]
+    t = TrafficScorer(clock=lambda: now[0])
+    t.grace("flooder")
+    for _ in range(300):
+        t.observe("flooder", 215, "telemetry", False)
+    now[0] = 11
+    assert [a for n, _, a, _ in t.flush_if_due() if n == "flooder"] == [True]
+
+
+def test_log_watcher_flags_session_takeover(client):
+    from app.log_watch import LogWatcher
+    w = LogWatcher(Path("unused"), client.pipeline)
+    w.handle("2026-10-06T11:40:04: Client n1 already connected, closing old connection.")
+    w.handle("2026-10-06T11:40:05: OpenSSL Error[0]: error:0A0000C7:SSL routines::peer did not return a certificate")
+    h = login(client, "view", "viewer-pass")
+    kinds = [e["kind"] for e in client.get("/api/v1/events?category=cyber", headers=h).json()]
+    assert "session_takeover" in kinds and "tls_rejected" in kinds
