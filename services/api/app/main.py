@@ -173,7 +173,7 @@ def create_app(settings: Settings | None = None, start_background: bool = True) 
         return pipeline.external_alert(body.source, body.category, body.severity, body.kind, body.message, body.data)
 
     # ---------------------------------------------------------------- actuators
-    @app.post("/api/v1/nodes/{node}/commands", status_code=202, dependencies=[Depends(rate_limit("cmd", 2, 10))])
+    @app.post("/api/v1/nodes/{node}/commands", status_code=202, dependencies=[Depends(rate_limit("cmd", 4, 24))])
     def command(node: str, body: Command, user=Depends(require("operator"))):
         if node not in pipeline.nodes:
             raise HTTPException(404, "unknown node")
