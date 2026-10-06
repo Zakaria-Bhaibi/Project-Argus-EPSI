@@ -1,0 +1,4 @@
+# Force LF everywhere: shell scripts, Dockerfiles and configs run on Linux (WSL / VM / containers).
+* text=auto eol=lf
+*.png binary
+*.jpg binary

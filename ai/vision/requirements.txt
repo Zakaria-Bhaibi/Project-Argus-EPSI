@@ -1,0 +1,4 @@
+opencv-python>=4.10,<5   # OpenCV 5 moved the HOG people detector out of the main package
+numpy>=1.26
+# YOLOv8n detector (recommended). Without it the script falls back to OpenCV HOG.
+ultralytics>=8.3

@@ -1,0 +1,41 @@
+{
+  "sensor": {
+    "model": "IsolationForest",
+    "train_windows": 44580,
+    "window_readings": 15,
+    "false_positive_rate": 0.003386004514672686,
+    "scenarios": [
+      {
+        "scenario": "gas_leak",
+        "model_detects_after_s": 4.0,
+        "naive_threshold_after_s": 58.0
+      },
+      {
+        "scenario": "overheat",
+        "model_detects_after_s": 32.0,
+        "naive_threshold_after_s": 278.0
+      },
+      {
+        "scenario": "sensor_fault",
+        "model_detects_after_s": 2.0,
+        "naive_threshold_after_s": 212.0
+      }
+    ]
+  },
+  "traffic": {
+    "model": "EllipticEnvelope",
+    "features": [
+      "msgs",
+      "mean_bytes",
+      "rejected",
+      "distinct_types"
+    ],
+    "false_positive_rate": 0.0,
+    "normal_bucket": 0.0,
+    "flood_400_msgs": 1.0,
+    "flood_30_msgs": 1.0,
+    "big_payloads": 1.0,
+    "one_rejected": 1.0,
+    "silent_node": 1.0
+  }
+}

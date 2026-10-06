@@ -1,0 +1,19 @@
+.venv/
+.pio/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+
+# secrets: never commit (brief §6: "aucun secret ni clé en clair")
+*.key
+*.srl
+*.hmac
+.env
+infra/pki/out/
+tools/smoke-certs/
+firmware/sentinel-node/include/secrets.h
+services/api/data/
+ai/anomaly/models/*.joblib
+ai/vision/*.pt
+infra/runtime/

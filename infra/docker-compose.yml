@@ -1,0 +1,174 @@
+# ARGUS Outpost stack: runs inside the hardened "Outpost" Linux VM (inner layer).
+#   cd infra && sudo ./setup-runtime.sh && docker compose up -d --build
+# Profiles:  --profile sim (simulated fleet inside the VM, single-laptop mode)
+#            --profile detect (CrowdSec log analysis; ban enforcement = host firewall bouncer)
+#            --profile monitoring (Netdata: host + container CPU/RAM, MCO)
+name: argus
+
+x-hardening: &hardening
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  restart: unless-stopped
+  tmpfs: ["/tmp:size=16m,mode=1777"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }   # MCO: bounded log volume
+
+networks:
+  edge_net:            # the only networks with published ports
+    ipam: { config: [{ subnet: 172.20.10.0/24 }] }
+  core_net:            # broker <-> api <-> db, no route to the outside
+    internal: true
+    ipam: { config: [{ subnet: 172.20.20.0/24 }] }
+  ops_net:             # reverse proxy <-> api (+ monitoring)
+    ipam: { config: [{ subnet: 172.20.30.0/24 }] }
+  decoy_net:           # decoy can only reach the api alerts endpoint
+    internal: true
+    ipam: { config: [{ subnet: 172.20.40.0/24 }] }
+
+volumes:
+  pg_data:
+  mosq_data:
+  mosq_log:
+  caddy_data:
+  caddy_config:
+  caddy_log:
+
+secrets:
+  jwt_secret:      { file: ./runtime/secrets/jwt_secret }
+  service_tokens:  { file: ./runtime/secrets/service_tokens }
+  decoy_token:     { file: ./runtime/secrets/decoy_token }
+  db_password:     { file: ./runtime/secrets/db_password }
+  users:           { file: ./runtime/secrets/users.json }
+  devices:         { file: ./runtime/secrets/devices.json }
+
+services:
+  mosquitto:
+    <<: *hardening
+    image: eclipse-mosquitto:2.0
+    user: "1883:1883"
+    ports: ["8883:8883"]
+    networks: [edge_net, core_net]
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/acl.conf:/mosquitto/config/acl.conf:ro
+      - ./runtime/mosquitto:/mosquitto/certs:ro
+      - mosq_data:/mosquitto/data
+      - mosq_log:/mosquitto/log
+    deploy: { resources: { limits: { memory: 128m, cpus: "0.5" } } }
+    pids_limit: 64
+
+  postgres:
+    <<: *hardening
+    image: postgres:16-alpine
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]   # entrypoint drops to the postgres user
+    networks: [core_net]
+    environment:
+      POSTGRES_DB: argus
+      POSTGRES_USER: argus
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes: [pg_data:/var/lib/postgresql/data]
+    tmpfs: ["/tmp:size=16m", "/var/run/postgresql:size=4m"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argus -d argus"]
+      interval: 10s
+    deploy: { resources: { limits: { memory: 256m, cpus: "1.0" } } }
+    pids_limit: 100
+
+  api:
+    <<: *hardening
+    build: { context: .., dockerfile: services/api/Dockerfile }
+    networks: [core_net, ops_net, decoy_net]
+    depends_on:
+      postgres: { condition: service_healthy }
+      mosquitto: { condition: service_started }
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "8883"
+      PKI_DIR: /run/pki
+      DEVICES_JSON: /run/secrets/devices
+      USERS_FILE: /run/secrets/users
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      SERVICE_TOKENS_FILE: /run/secrets/service_tokens
+      MOSQUITTO_LOG: /mosquitto/log/mosquitto.log
+      CAMERA_NODE: sentinel-hero
+    secrets: [jwt_secret, service_tokens, users, devices, db_password]
+    # build the DB URL from the password secret without ever putting it in an env var
+    entrypoint: ["sh", "-c", "echo \"postgresql+psycopg://argus:$$(cat /run/secrets/db_password)@postgres:5432/argus\" > /tmp/database_url && DATABASE_URL_FILE=/tmp/database_url exec uvicorn app.main:app --app-dir services/api --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips 172.20.30.0/24"]
+    volumes:
+      - ./runtime/api-pki:/run/pki:ro
+      - mosq_log:/mosquitto/log:ro
+    deploy: { resources: { limits: { memory: 512m, cpus: "1.5" } } }
+    pids_limit: 128
+
+  caddy:
+    <<: *hardening
+    build: { context: .., dockerfile: infra/caddy/Dockerfile }
+    ports: ["443:8443"]
+    networks: [ops_net, edge_net]
+    depends_on: [api]
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./runtime/caddy:/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_log:/var/log/caddy
+    deploy: { resources: { limits: { memory: 128m, cpus: "0.5" } } }
+    pids_limit: 64
+
+  decoy:
+    <<: *hardening
+    build: { context: ../services/decoy }
+    ports: ["1883:1883", "2323:2323"]
+    networks: [edge_net, decoy_net]
+    environment:
+      API_URL: http://api:8000/api/v1/alerts
+      DECOY_TOKEN_FILE: /run/secrets/decoy_token
+    secrets: [decoy_token]
+    deploy: { resources: { limits: { memory: 64m, cpus: "0.25" } } }
+    pids_limit: 32
+
+  # ------------------------------------------------------------- optional profiles
+  simulator:
+    <<: *hardening
+    profiles: [sim]
+    build: { context: .., dockerfile: services/simulator/Dockerfile }
+    networks: [edge_net]
+    environment:
+      BROKER_HOST: mosquitto
+      PKI_DIR: /run/pki
+      NODES: sentinel-01,sentinel-02,sentinel-03,sentinel-04
+    volumes: ["./runtime/sim-pki:/run/pki:ro"]
+    deploy: { resources: { limits: { memory: 96m, cpus: "0.5" } } }
+
+  crowdsec:
+    profiles: [detect]
+    image: crowdsecurity/crowdsec:latest
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    networks: [ops_net]
+    environment:
+      COLLECTIONS: "crowdsecurity/caddy crowdsecurity/linux"
+    volumes:
+      - ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+      - caddy_log:/var/log/caddy:ro
+      - mosq_log:/var/log/mosquitto:ro
+      - /var/log/auth.log:/var/log/host/auth.log:ro
+    deploy: { resources: { limits: { memory: 256m } } }
+
+  netdata:
+    profiles: [monitoring]
+    image: netdata/netdata:stable
+    restart: unless-stopped
+    pid: host
+    cap_add: [SYS_PTRACE]
+    security_opt: ["apparmor:unconfined", "no-new-privileges:true"]
+    ports: ["127.0.0.1:19999:19999"]   # admin only, via SSH tunnel
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - mosq_log:/var/log/mosquitto:ro
+    deploy: { resources: { limits: { memory: 256m } } }

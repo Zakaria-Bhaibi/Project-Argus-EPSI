@@ -1,0 +1,6 @@
+# CrowdSec log sources (parsers come from the collections in docker-compose.yml)
+filenames: [/var/log/caddy/access.log]
+labels: { type: caddy }
+---
+filenames: [/var/log/host/auth.log]
+labels: { type: syslog }
