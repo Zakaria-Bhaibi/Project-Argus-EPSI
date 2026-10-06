@@ -61,7 +61,7 @@ function useClock() {
   return t
 }
 
-export default function CameraFeed({ nodes, threats, threatFx, events }) {
+export default function CameraFeed({ nodes, threats, threatFx, events, drill }) {
   const box = useRef()
   const time = useClock()
   // the most recent intrusion episode anywhere on site is what the PTZ follows
@@ -77,7 +77,7 @@ export default function CameraFeed({ nodes, threats, threatFx, events }) {
       <header className="panel-head"><h2>Mast camera</h2></header>
       <div className="cctv">
         <Canvas camera={{ fov: 42, near: 0.5, far: 200 }} dpr={1} gl={{ antialias: true }}>
-          <World nodes={nodes} threats={threats} threatFx={threatFx} lastCyberTs={lastCyberTs}
+          <World nodes={nodes} threats={threats} threatFx={threatFx} lastCyberTs={lastCyberTs} drillStartedAt={drill?.startedAt}
                  selected={null} onSelect={() => {}} shadows={false} />
           <Ptz target={target} box={box} />
         </Canvas>

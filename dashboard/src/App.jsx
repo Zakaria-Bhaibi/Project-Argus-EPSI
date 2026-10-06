@@ -9,6 +9,7 @@ import Timeline from './components/Timeline.jsx'
 import NodePanel from './components/NodePanel.jsx'
 import Controls from './components/Controls.jsx'
 import CameraFeed from './components/CameraFeed.jsx'
+import DrillBanner, { DRILL_S } from './components/DrillBanner.jsx'
 
 function useClock() {
   const [now, setNow] = useState(() => Date.now())
@@ -34,6 +35,15 @@ function Console() {
   const [s, dispatch] = useReducer(reducer, initialState)
   const [selected, setSelected] = useState('sentinel-hero')
   const now = useClock()
+  // visual-only cyber drill: animation on the map, never an event in the timeline
+  const [drill, setDrill] = useState(null)
+  useEffect(() => {
+    if (!drill) return
+    const t = setTimeout(() => setDrill(null), DRILL_S * 1000)
+    return () => clearTimeout(t)
+  }, [drill])
+  const startDrill = () => setDrill({ startedAt: Date.now() / 1000 })
+  const stopDrill = () => setDrill(null)
 
   useEffect(() => {
     getEvents().then((events) => dispatch({ type: 'events', events })).catch(() => {})
@@ -75,7 +85,8 @@ function Console() {
       <main className="grid">
         <section className="twin" aria-label="Site map">
           <Situation events={s.events} now={now} />
-          <SiteTwin nodes={s.nodes} threats={threats} threatFx={threatFx} events={s.events} selected={selected} onSelect={setSelected} />
+          <DrillBanner drill={drill} />
+          <SiteTwin nodes={s.nodes} threats={threats} threatFx={threatFx} events={s.events} drill={drill} selected={selected} onSelect={setSelected} />
           <ul className="legend" aria-label="Map legend">
             <li><i className="dot dot-online" />Reporting</li>
             <li><i className="dot dot-down" />Silent</li>
@@ -87,8 +98,8 @@ function Console() {
         </section>
         <Timeline events={s.events} onSelectNode={setSelected} />
         <NodePanel id={selected} node={s.nodes[selected]} series={s.series[selected]} traffic={s.traffic[selected]} />
-        <Controls key={selected} id={selected} node={s.nodes[selected]} />
-        <CameraFeed nodes={s.nodes} threats={threats} threatFx={threatFx} events={s.events} />
+        <Controls key={selected} id={selected} node={s.nodes[selected]} drill={drill} onStartDrill={startDrill} onStopDrill={stopDrill} />
+        <CameraFeed nodes={s.nodes} threats={threats} threatFx={threatFx} events={s.events} drill={drill} />
       </main>
       <p className="sr-only" aria-live="polite">{selected ? `Showing ${nodeLabel(selected)}` : ''}</p>
     </div>

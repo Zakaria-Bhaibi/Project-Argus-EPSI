@@ -327,18 +327,29 @@ export function Packets({ nodes }) {
   )
 }
 
-// Shield dome: ripples for a few seconds after each cyber event.
-export function ShieldDome({ lastCyberTs }) {
+// Shield dome: ripples for a few seconds after each cyber event, or during a visual drill
+// (drill: red impact flashes for 3 s, then the dome settles back to blue and fades by 6 s).
+const RED = new THREE.Color('#FF3B5C'), BLUE = new THREE.Color(C.cyber)
+export function ShieldDome({ lastCyberTs, drillStartedAt }) {
   const ref = useRef()
   useFrame(() => {
-    const age = Date.now() / 1000 - (lastCyberTs || 0)
+    const now = Date.now() / 1000
+    const drillAge = drillStartedAt ? now - drillStartedAt : Infinity
+    const drill = drillAge >= 0 && drillAge < 6
+    const age = drill ? drillAge : now - (lastCyberTs || 0)
     const on = age >= 0 && age < 6
     ref.current.visible = on
-    if (on) {
-      const k = age / 6
-      ref.current.material.opacity = 0.32 * (1 - k)
-      ref.current.scale.setScalar(1 + (REDUCED ? 0 : 0.04 * Math.sin(age * 9)))
+    if (!on) return
+    const m = ref.current.material
+    if (drill && drillAge < 3) {
+      const flash = REDUCED ? 1 : Math.abs(Math.sin(drillAge * 7))   // impacts
+      m.color.copy(RED).lerp(BLUE, 1 - flash)
+      m.opacity = 0.25 + 0.3 * flash
+    } else {
+      m.color.copy(BLUE)
+      m.opacity = 0.32 * (1 - age / 6)
     }
+    ref.current.scale.setScalar(1 + (REDUCED ? 0 : 0.04 * Math.sin(age * 9)))
   })
   return (
     <mesh ref={ref} visible={false}>
@@ -350,7 +361,7 @@ export function ShieldDome({ lastCyberTs }) {
 
 
 /** Lights, terrain, site, beacons, packets, shield and threat effects. */
-export function World({ nodes, threats, threatFx, lastCyberTs, selected, onSelect, shadows = true }) {
+export function World({ nodes, threats, threatFx, lastCyberTs, drillStartedAt, selected, onSelect, shadows = true }) {
   return (
     <>
       <color attach="background" args={[C.sky]} />
@@ -366,7 +377,7 @@ export function World({ nodes, threats, threatFx, lastCyberTs, selected, onSelec
         <Beacon key={id} id={id} node={nodes[id]} threat={threats[id]} selected={selected === id} onSelect={onSelect} />
       ))}
       <Packets nodes={nodes} />
-      <ShieldDome lastCyberTs={lastCyberTs} />
+      <ShieldDome lastCyberTs={lastCyberTs} drillStartedAt={drillStartedAt} />
       <ThreatEffects threats={threatFx} />
     </>
   )

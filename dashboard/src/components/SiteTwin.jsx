@@ -58,7 +58,7 @@ function hazards(t) {
   return out
 }
 
-export default function SiteTwin({ nodes, threats, threatFx, events, selected, onSelect }) {
+export default function SiteTwin({ nodes, threats, threatFx, events, drill, selected, onSelect }) {
   const labelRefs = useRef({})
   const badgeRefs = useRef({})
   const lastCyberTs = events.find((e) => e.category === 'cyber')?.ts
@@ -95,7 +95,7 @@ export default function SiteTwin({ nodes, threats, threatFx, events, selected, o
       </div>
       <Canvas shadows camera={{ position: [70, 60, 90], fov: 40 }} dpr={[1, 1.75]}
               gl={{ antialias: true, powerPreference: 'high-performance' }} onPointerMissed={() => onSelect(null)}>
-        <World nodes={nodes} threats={threats} threatFx={threatFx} lastCyberTs={lastCyberTs}
+        <World nodes={nodes} threats={threats} threatFx={threatFx} lastCyberTs={lastCyberTs} drillStartedAt={drill?.startedAt}
                selected={selected} onSelect={onSelect} />
         <CameraIntro />
         <OrbitControls enablePan={false} minDistance={25} maxDistance={110} maxPolarAngle={1.3} target={[0, 0, 0]}

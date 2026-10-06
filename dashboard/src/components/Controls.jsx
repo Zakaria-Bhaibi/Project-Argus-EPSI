@@ -11,7 +11,7 @@ const SCENARIOS = [
   { id: 'sensor_fault', label: 'Sensor fault' },
 ]
 
-export default function Controls({ id, node }) {
+export default function Controls({ id, node, drill, onStartDrill, onStopDrill }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState(null)
   const [text, setText] = useState('')
@@ -70,6 +70,13 @@ export default function Controls({ id, node }) {
           <p className="hint">This node runs real firmware: change its temperature, gas and motion with the sensor controls in Wokwi.</p>
         )}
       </fieldset>
+      <div className="control-row drill-row">
+        <span className="control-name">Cyber drill</span>
+        <button className={drill ? 'btn btn-danger' : 'btn'} onClick={drill ? onStopDrill : onStartDrill}>
+          {drill ? 'Stop drill' : 'Start drill'}
+        </button>
+        <span className="hint">Animation only, for the demo</span>
+      </div>
       {note && <p className={note.ok ? 'note' : 'note note-error'} role="status">{note.text}</p>}
     </section>
   )
