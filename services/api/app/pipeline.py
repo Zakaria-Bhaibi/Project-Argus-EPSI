@@ -151,14 +151,16 @@ class Pipeline:
     def _telemetry(self, m: proto.Message) -> None:
         d = m.data
         try:
+            # gas_ppm may be absent while a real MQ-2 warms up: store None, never a guessed value
             reading = {"temp_c": float(d["temp_c"]), "hum_pct": float(d["hum_pct"]),
-                       "gas_ppm": float(d["gas_ppm"]), "pir": bool(d["pir"])}
+                       "gas_ppm": float(d["gas_ppm"]) if d.get("gas_ppm") is not None else None,
+                       "pir": bool(d["pir"])}
         except (KeyError, TypeError, ValueError):
             self.security_event("schema", "warning", "api", f"invalid telemetry fields on {m.node}", {"node": m.node})
             return
 
         score = None
-        if self.sensor_scorer:
+        if self.sensor_scorer and reading["gas_ppm"] is not None:
             r = self.sensor_scorer.update(m.node, reading)
             if r:
                 score, is_anomaly = r

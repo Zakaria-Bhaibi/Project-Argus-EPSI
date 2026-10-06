@@ -87,6 +87,16 @@ button, input { font: inherit; color: inherit; }
 .pin-name { font: 700 15px/1.1 var(--display); }
 .pin-value { font-size: 12px; font-variant-numeric: tabular-nums; }
 
+/* hazard badges over the map: icon + words, never color alone */
+.hazard-stack { position: absolute; top: 0; left: 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  pointer-events: none; will-change: transform; z-index: 2; }
+.hazard { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 2px; white-space: nowrap;
+  font: 700 14px/1.2 var(--display); letter-spacing: 0.02em; }
+.hazard b { font-size: 13px; }
+.hazard-gas { background: #FFD23F; color: #1B1A0A; }
+.hazard-heat { background: #E8341C; color: #FFF4F0; }
+.hazard-intruder { background: #FF4D8D; color: #1F0610; }
+
 /* ---------------------------------------------------------------- timeline */
 .filters { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { border: 1px solid var(--rule); background: transparent; border-radius: 999px; padding: 2px 10px; font-size: 13px; cursor: pointer; color: var(--ink-3); }
@@ -144,7 +154,22 @@ input { border: 1px solid var(--rule); border-radius: var(--radius-ctl); padding
 .note { margin: 8px 0 0; font-size: 13px; color: var(--ok); }
 .note-error { color: var(--down); }
 
-/* ---------------------------------------------------------------- camera */
+/* ---------------------------------------------------------------- camera (virtual CCTV) */
+.cctv { position: relative; flex: 1; min-height: 0; border-radius: var(--radius-ctl); overflow: hidden; background: #05090C; }
+.cctv canvas { filter: saturate(0.55) contrast(1.15) brightness(1.1); }
+.cctv-overlay { position: absolute; inset: 0; pointer-events: none; color: #D8E6EE; font: 600 12px/1 var(--text);
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px); }
+.cctv-rec { position: absolute; top: 8px; left: 10px; color: #FF4D4D; }
+.cctv-id { position: absolute; top: 8px; right: 10px; }
+.cctv-time { position: absolute; bottom: 8px; left: 10px; font-variant-numeric: tabular-nums; }
+.cctv-mode { position: absolute; bottom: 8px; right: 10px; }
+.cctv-box { position: absolute; top: 0; left: 0; display: none; border: 2px solid #3DDC97; will-change: transform; }
+.cctv-box[data-zone="restricted"] { border-color: #FF4D8D; }
+.cctv-box span { position: absolute; bottom: 100%; left: -2px; padding: 1px 5px; background: #3DDC97; color: #04130B; font-size: 11px; white-space: nowrap; }
+.cctv-box[data-zone="restricted"] span { background: #FF4D8D; color: #1F0610; }
+@media (prefers-reduced-motion: no-preference) { .cctv-rec { animation: rec 1.2s steps(2) infinite; } }
+@keyframes rec { 50% { opacity: 0.2; } }
+
 .camera img { width: 100%; flex: 1; min-height: 0; object-fit: contain; background: var(--ink); border-radius: var(--radius-ctl); }
 .camera-off { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 8px; color: var(--ink-3); }
 .camera-off p { margin: 0; max-width: 36ch; }

@@ -218,3 +218,13 @@ def test_log_watcher_flags_session_takeover(client):
     h = login(client, "view", "viewer-pass")
     kinds = [e["kind"] for e in client.get("/api/v1/events?category=cyber", headers=h).json()]
     assert "session_takeover" in kinds and "tls_rejected" in kinds
+
+
+def test_telemetry_without_gas_during_warmup_is_accepted(client):
+    p = client.pipeline
+    p.handle_mqtt(proto.topic("n1", "telemetry"),
+                  proto.encode("n1", "telemetry", {"temp_c": 23.0, "hum_pct": 45.0, "pir": False}, K1))
+    h = login(client, "view", "viewer-pass")
+    pts = client.get("/api/v1/telemetry?node=n1", headers=h).json()
+    assert len(pts) == 1 and pts[0]["gas_ppm"] is None
+    assert not [e for e in client.get("/api/v1/events?category=cyber", headers=h).json() if e["kind"] == "schema"]

@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from sqlalchemy import JSON, Boolean, Float, Integer, String, create_engine, select
+from sqlalchemy import JSON, Boolean, Float, Integer, String, create_engine, select, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 
@@ -18,7 +18,7 @@ class Telemetry(Base):
     ts: Mapped[float] = mapped_column(Float, index=True)
     temp_c: Mapped[float] = mapped_column(Float)
     hum_pct: Mapped[float] = mapped_column(Float)
-    gas_ppm: Mapped[float] = mapped_column(Float)
+    gas_ppm: Mapped[float | None] = mapped_column(Float, nullable=True)  # None while the MQ-2 warms up
     pir: Mapped[bool] = mapped_column(Boolean)
     anomaly: Mapped[float | None] = mapped_column(Float, nullable=True)
 
@@ -48,6 +48,9 @@ class Database:
         else:
             self.engine = create_engine(url, pool_pre_ping=True)
         Base.metadata.create_all(self.engine)
+        if self.engine.dialect.name == "postgresql":  # tiny migration for databases created before v0.2
+            with self.engine.begin() as c:
+                c.execute(text("ALTER TABLE telemetry ALTER COLUMN gas_ppm DROP NOT NULL"))
         self.session = sessionmaker(self.engine, expire_on_commit=False)
 
     def add(self, obj: Base) -> Base:

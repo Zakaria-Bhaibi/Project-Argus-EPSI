@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import { connectLive, getEvents, getTelemetry, session } from './api.js'
 import { initialState, recentThreat, reducer } from './state.js'
+import { threatState } from './threats.js'
 import { NODE_INFO, SITE, nodeLabel } from './site.js'
 import Login from './components/Login.jsx'
 import SiteTwin from './components/SiteTwin.jsx'
@@ -36,6 +37,10 @@ function Console() {
 
   useEffect(() => {
     getEvents().then((events) => dispatch({ type: 'events', events })).catch(() => {})
+    // history for every node, so each has a baseline for the threat effects straight away
+    for (const id of Object.keys(NODE_INFO)) {
+      getTelemetry(id, 15).then((points) => dispatch({ type: 'history', node: id, points })).catch(() => {})
+    }
     return connectLive((msg) => dispatch({ type: 'msg', msg }), (value) => dispatch({ type: 'link', value }))
   }, [])
 
@@ -47,6 +52,11 @@ function Console() {
     () => Object.fromEntries(Object.keys(NODE_INFO).map((id) => [id, recentThreat(s.events, id)])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [s.events, Math.floor(now / 2000)],
+  )
+  const threatFx = useMemo(
+    () => threatState(s.nodes, s.series, s.events, now / 1000),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [s.nodes, s.series, s.events, Math.floor(now / 1000)],
   )
   const nodes = Object.values(s.nodes)
   const online = nodes.filter((n) => n.status === 'online').length
@@ -65,7 +75,7 @@ function Console() {
       <main className="grid">
         <section className="twin" aria-label="Site map">
           <Situation events={s.events} now={now} />
-          <SiteTwin nodes={s.nodes} threats={threats} events={s.events} selected={selected} onSelect={setSelected} />
+          <SiteTwin nodes={s.nodes} threats={threats} threatFx={threatFx} events={s.events} selected={selected} onSelect={setSelected} />
           <ul className="legend" aria-label="Map legend">
             <li><i className="dot dot-online" />Reporting</li>
             <li><i className="dot dot-down" />Silent</li>
@@ -78,7 +88,7 @@ function Console() {
         <Timeline events={s.events} onSelectNode={setSelected} />
         <NodePanel id={selected} node={s.nodes[selected]} series={s.series[selected]} traffic={s.traffic[selected]} />
         <Controls key={selected} id={selected} node={s.nodes[selected]} />
-        <CameraFeed />
+        <CameraFeed nodes={s.nodes} threats={threats} threatFx={threatFx} events={s.events} />
       </main>
       <p className="sr-only" aria-live="polite">{selected ? `Showing ${nodeLabel(selected)}` : ''}</p>
     </div>

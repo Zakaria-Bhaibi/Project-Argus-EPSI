@@ -23,7 +23,9 @@ static Adafruit_SSD1306 oled(128, 64, &Wire, -1);
 static uint8_t hmacKey[32];
 static String topicTelemetry, topicEvents, topicStatus, topicCmd;
 static uint64_t lastSeq = 0, lastCmdSeq = 0;
-static float gasR0 = 0;  // sensor resistance in clean air (kOhm)
+static float gasR0 = 0;  // sensor resistance in clean air (kOhm), set after warm-up
+static bool gasCalibrated = false;
+static int gasAdc = 0;
 
 static bool lastPir = false, lastTamper = false, buzzerOn = false;
 static String ledState = "green", displayText = "", lastEvent = "boot";
@@ -92,10 +94,33 @@ static void applyBuzzer() {
 
 // ------------------------------------------------------------------ MQ-2
 static float gasResistance() {
-  int raw = analogRead(PIN_GAS_AO);
+  // oversample: on the log-log curve a small voltage wobble becomes a large ppm swing
+  long sum = 0;
+  for (int i = 0; i < 16; i++) sum += analogRead(PIN_GAS_AO);
+  int raw = gasAdc = sum / 16;
   float v = max(raw, 1) * GAS_VC / 4095.0f;
   if (v >= GAS_VC) v = GAS_VC - 0.001f;
   return (GAS_VC - v) / v * GAS_RL;
+}
+
+// Warm-up calibration, like a real MQ-2: R0 is taken once the clean-air reading is stable
+// (5-sample average moves < 1 % between samples), or after 30 s at most. Called every 500 ms.
+static void calibrateGasStep() {
+  static float buf[5];
+  static int n = 0;
+  static float prevAvg = 0;
+  static unsigned long start = millis();
+  buf[n++ % 5] = gasResistance();
+  if (n < 5) return;
+  float avg = 0;
+  for (float r : buf) avg += r / 5;
+  bool stable = prevAvg > 0 && fabsf(avg - prevAvg) / prevAvg < 0.01f;
+  prevAvg = avg;
+  if (stable || millis() - start > 30000) {
+    gasR0 = avg;
+    gasCalibrated = true;
+    Serial.printf("[ARGUS] MQ-2 calibrated: R0=%.2f kOhm (adc %d)\n", gasR0, gasAdc);
+  }
 }
 
 static float readGasPpm() {
@@ -204,7 +229,6 @@ void setup() {
   topicTelemetry = base + "telemetry"; topicEvents = base + "events";
   topicStatus = base + "status";       topicCmd = base + "cmd";
 
-  gasR0 = gasResistance();  // boot calibration: assumes clean air at power-on, like a real MQ-2
 
   connectWifi();
   tls.setCACert(ARGUS_CA_CERT);
@@ -229,15 +253,23 @@ void loop() {
   if (tamper && !lastTamper) sendEvent("tamper");
   lastTamper = tamper;
 
+  static unsigned long lastCal = 0;
+  if (!gasCalibrated && millis() - lastCal >= 500) { lastCal = millis(); calibrateGasStep(); }
+
   if (millis() - lastTelemetry >= TELEMETRY_PERIOD_MS) {
     lastTelemetry = millis();
     TempAndHumidity th = dht.getTempAndHumidity();
     if (!isnan(th.temperature)) { tC = th.temperature; hum = th.humidity; }
-    gasPpm = readGasPpm();
-    char data[160];
-    snprintf(data, sizeof(data), "{\"temp_c\":%.2f,\"hum_pct\":%.1f,\"gas_ppm\":%.1f,\"pir\":%s}",
-             tC, hum, gasPpm, pir ? "true" : "false");
+    char data[200];
+    if (gasCalibrated) {
+      gasPpm = readGasPpm();
+      snprintf(data, sizeof(data), "{\"temp_c\":%.2f,\"hum_pct\":%.1f,\"gas_ppm\":%.1f,\"gas_adc\":%d,\"pir\":%s}",
+               tC, hum, gasPpm, gasAdc, pir ? "true" : "false");
+    } else {  // no gas value until the MQ-2 has warmed up: never report a number we don't trust
+      snprintf(data, sizeof(data), "{\"temp_c\":%.2f,\"hum_pct\":%.1f,\"gas_adc\":%d,\"pir\":%s}",
+               tC, hum, gasAdc, pir ? "true" : "false");
+    }
     publishSigned(topicTelemetry, "telemetry", data);
-    drawOled(buzzerOn ? "TLS OK  ALARM!" : "TLS OK");
+    drawOled(!gasCalibrated ? "MQ-2 warm-up" : buzzerOn ? "TLS OK  ALARM!" : "TLS OK");
   }
 }
