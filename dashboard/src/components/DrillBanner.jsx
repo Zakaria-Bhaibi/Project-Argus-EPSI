@@ -1,11 +1,12 @@
 // Visual "cyber drill" banner over the map. Pure animation: no traffic, no API call, no timeline entry.
 import { useEffect, useState } from 'react'
+import { t } from '../i18n.js'
 
 export const DRILL_S = 9
 const STEPS = [
-  { until: 3, kind: 'attack', icon: '⚠', text: 'Under attack' },
-  { until: 6, kind: 'defend', icon: '⛨', text: 'Defenses engaged' },
-  { until: DRILL_S, kind: 'blocked', icon: '✓', text: 'Attack blocked' },
+  { until: 3, kind: 'attack', icon: '⚠', text: 'drill.attack' },
+  { until: 6, kind: 'defend', icon: '⛨', text: 'drill.defend' },
+  { until: DRILL_S, kind: 'blocked', icon: '✓', text: 'drill.blocked' },
 ]
 
 export default function DrillBanner({ drill }) {
@@ -20,7 +21,7 @@ export default function DrillBanner({ drill }) {
   const step = STEPS.find((s) => age < s.until) ?? STEPS[STEPS.length - 1]
   return (
     <div className={`drill drill-${step.kind}`} role="status" aria-live="assertive">
-      <span className="drill-text"><b aria-hidden="true">{step.icon}</b>{step.text}</span>
+      <span className="drill-text"><b aria-hidden="true">{step.icon}</b>{t(step.text)}</span>
     </div>
   )
 }

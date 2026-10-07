@@ -4,6 +4,8 @@ import { initialState, recentThreat, reducer } from './state.js'
 import { threatState } from './threats.js'
 import { ALARM_PRIORITY, unlockAudio, useAlarmSound } from './sound.js'
 import { NODE_INFO, SITE, nodeLabel } from './site.js'
+import { eventMessage, locale, t, useLang } from './i18n.js'
+import LangSwitch from './components/LangSwitch.jsx'
 import Login from './components/Login.jsx'
 import SiteTwin from './components/SiteTwin.jsx'
 import Timeline from './components/Timeline.jsx'
@@ -24,10 +26,10 @@ function Situation({ events, now }) {
   const open = events.find((e) => e.kind === 'incident' && age(e) < 120)
     || events.find((e) => e.severity === 'critical' && e.category !== 'system' && age(e) < 60)
     || events.find((e) => e.severity === 'warning' && e.category !== 'system' && age(e) < 30)
-  if (!open) return <p className="situation is-clear">All clear across the site</p>
+  if (!open) return <p className="situation is-clear">{t('situation.clear')}</p>
   return (
     <p className={`situation cat-${open.category}`} role="alert">
-      {open.message}
+      {eventMessage(open)}
     </p>
   )
 }
@@ -110,27 +112,28 @@ function Console() {
       <header className="topbar">
         <span className="wordmark">ARGUS</span>
         <span className="site">{SITE.name}, {SITE.region}</span>
-        <span className={`fleet ${online < nodes.length ? 'is-degraded' : ''}`}>{online} of {nodes.length} nodes reporting</span>
-        <span className={`link link-${s.link}`}>{s.link === 'live' ? 'Live' : 'Reconnecting…'}</span>
+        <span className={`fleet ${online < nodes.length ? 'is-degraded' : ''}`}>{t('top.reporting', { online, total: nodes.length })}</span>
+        <span className={`link link-${s.link}`}>{s.link === 'live' ? t('top.live') : t('top.reconnecting')}</span>
         <button className={`btn btn-quiet sound${soundOn ? ' is-on' : ''}`} aria-pressed={soundOn} onClick={toggleSound}>
-          {soundOn ? (alarm ? '🔊 Alarm sounding' : '🔊 Sound on') : '🔇 Sound off'}
+          {soundOn ? (alarm ? t('top.alarm') : t('top.soundOn')) : t('top.soundOff')}
         </button>
-        <time className="clock">{new Date(now).toLocaleTimeString()}</time>
-        <button className="btn btn-quiet" onClick={() => { session.clear(); location.reload() }}>Sign out</button>
+        <time className="clock">{new Date(now).toLocaleTimeString(locale())}</time>
+        <button className="btn btn-quiet" onClick={() => { session.clear(); location.reload() }}>{t('top.signOut')}</button>
+        <LangSwitch />
       </header>
 
       <main className="grid">
-        <section className="twin" aria-label="Site map">
+        <section className="twin" aria-label={t('map.label')}>
           <Situation events={events} now={now} />
           <DrillBanner drill={drill} />
           <SiteTwin nodes={s.nodes} threats={threats} threatFx={threatFx} events={events} drill={drill} selected={selected} onSelect={setSelected} />
-          <ul className="legend" aria-label="Map legend">
-            <li><i className="dot dot-online" />Reporting</li>
-            <li><i className="dot dot-down" />Silent</li>
-            <li><i className="dot dot-environmental" />Environmental alert</li>
-            <li><i className="dot dot-intrusion" />Intrusion alert</li>
-            <li><i className="dot dot-cyber" />Cyber alert</li>
-            <li><i className="dot dot-packet" />Message in flight</li>
+          <ul className="legend" aria-label={t('map.legend')}>
+            <li><i className="dot dot-online" />{t('legend.online')}</li>
+            <li><i className="dot dot-down" />{t('legend.down')}</li>
+            <li><i className="dot dot-environmental" />{t('legend.environmental')}</li>
+            <li><i className="dot dot-intrusion" />{t('legend.intrusion')}</li>
+            <li><i className="dot dot-cyber" />{t('legend.cyber')}</li>
+            <li><i className="dot dot-packet" />{t('legend.packet')}</li>
           </ul>
         </section>
         <Timeline events={events} allEvents={s.events} onSelectNode={setSelected} />
@@ -138,12 +141,13 @@ function Console() {
         <Controls id={selected} node={s.nodes[selected]} onSelect={setSelected} drill={drill} onStartDrill={startDrill} onStopDrill={stopDrill} onAllClear={() => setClearedAt(Date.now() / 1000)} />
         <CameraFeed nodes={s.nodes} threats={threats} threatFx={threatFx} events={events} drill={drill} />
       </main>
-      <p className="sr-only" aria-live="polite">{selected ? `Showing ${nodeLabel(selected)}` : ''}</p>
+      <p className="sr-only" aria-live="polite">{selected ? t('sr.showing', { node: nodeLabel(selected) }) : ''}</p>
     </div>
   )
 }
 
 export default function App() {
+  useLang()   // re-render everything when the language changes
   const [authed, setAuthed] = useState(Boolean(session.token))
   return authed ? <Console /> : <Login onDone={() => setAuthed(true)} />
 }

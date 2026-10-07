@@ -5,12 +5,13 @@
 import { useEffect, useState } from 'react'
 import { sendCommand, session } from '../api.js'
 import { nodeLabel } from '../site.js'
+import { t } from '../i18n.js'
 
 const SIMULATED = ['sentinel-01', 'sentinel-02', 'sentinel-03', 'sentinel-04']
 const INCIDENTS = [
-  { id: 'gas', label: 'Gas leak', node: 'sentinel-02', scenario: 'gas_leak' },
-  { id: 'heat', label: 'Overheat', node: 'sentinel-04', scenario: 'overheat' },
-  { id: 'intruder', label: 'Send intruder', node: 'sentinel-01', scenario: 'intruder' },
+  { id: 'gas', node: 'sentinel-02', scenario: 'gas_leak' },
+  { id: 'heat', node: 'sentinel-04', scenario: 'overheat' },
+  { id: 'intruder', node: 'sentinel-01', scenario: 'intruder' },
 ]
 const CONFIRM_TIMEOUT_MS = 6000
 
@@ -31,14 +32,14 @@ export default function Controls({ id, node, onSelect, drill, onStartDrill, onSt
   useEffect(() => {
     if (!pending || pending.node !== id) return
     if (act[pending.action] === pending.value) {
-      setNote({ ok: true, text: `Confirmed by ${nodeLabel(id)}` })
+      setNote({ ok: true, text: t('note.confirmed', { node: nodeLabel(id) }) })
       setPending(null)
     }
   }, [act, pending, id])
   useEffect(() => {
     if (!pending) return
     const t = setTimeout(() => {
-      setNote({ ok: false, text: `${nodeLabel(pending.node)} did not confirm. Is it online?` })
+      setNote({ ok: false, text: t('note.noConfirm', { node: nodeLabel(pending.node) }) })
       setPending(null)
     }, CONFIRM_TIMEOUT_MS)
     return () => clearTimeout(t)
@@ -49,7 +50,7 @@ export default function Controls({ id, node, onSelect, drill, onStartDrill, onSt
     try {
       await sendCommand(id, action, value)
       setPending({ action, value: action === 'display' ? 'ok' : value, node: id })
-      setNote({ ok: true, text: `Sent. Waiting for ${nodeLabel(id)} to confirm…` })
+      setNote({ ok: true, text: t('note.sent', { node: nodeLabel(id) }) })
     } catch (e) {
       setNote({ ok: false, text: e.message })
     } finally {
@@ -62,7 +63,7 @@ export default function Controls({ id, node, onSelect, drill, onStartDrill, onSt
     try {
       await sendCommand(inc.node, 'scenario', inc.scenario)
       setActive((a) => ({ ...a, [inc.id]: true }))
-      setNote({ ok: true, text: `${inc.label} started at ${nodeLabel(inc.node)}` })
+      setNote({ ok: true, text: t('note.started', { incident: t(`inc.${inc.id}`), node: nodeLabel(inc.node) }) })
       onSelect(inc.node)
     } catch (e) {
       setNote({ ok: false, text: e.message })
@@ -80,60 +81,60 @@ export default function Controls({ id, node, onSelect, drill, onStartDrill, onSt
       setActive({})
       if (drill) onStopDrill()
       onAllClear()
-      setNote({ ok: true, text: 'All clear: scenarios stopped, sirens off, lights green' })
+      setNote({ ok: true, text: t('note.allClear') })
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <section className="panel controls" aria-label="Controls">
-      <header className="panel-head"><h2>Controls</h2></header>
-      {!operator && <p className="hint">Viewer accounts can watch but not act. Sign in as an operator to send commands.</p>}
+    <section className="panel controls" aria-label={t('controls.title')}>
+      <header className="panel-head"><h2>{t('controls.title')}</h2></header>
+      {!operator && <p className="hint">{t('controls.viewer')}</p>}
 
       <fieldset className="simulate" disabled={!operator || busy}>
-        <legend>Simulate an incident</legend>
-        <div className="seg" role="group" aria-label="Simulate an incident">
+        <legend>{t('controls.simulate')}</legend>
+        <div className="seg" role="group" aria-label={t('controls.simulate')}>
           {INCIDENTS.map((inc) => (
             <button key={inc.id} className={`seg-btn inc-${inc.id}`} aria-pressed={!!active[inc.id]} onClick={() => incident(inc)}>
-              {inc.label}
+              {t(`inc.${inc.id}`)}
             </button>
           ))}
           <button className="seg-btn inc-cyber" aria-pressed={!!drill} onClick={drill ? onStopDrill : onStartDrill}>
-            {drill ? 'Stop cyber attack' : 'Cyber attack'}
+            {drill ? t('inc.stopCyber') : t('inc.cyber')}
           </button>
-          <button className="seg-btn inc-clear" onClick={allClear}>All clear</button>
+          <button className="seg-btn inc-clear" onClick={allClear}>{t('inc.clear')}</button>
         </div>
       </fieldset>
 
       <fieldset disabled={!operator || busy || !online}>
-        <legend>{id ? nodeLabel(id) : 'No node selected'}</legend>
+        <legend>{id ? nodeLabel(id) : t('controls.noNode')}</legend>
         {id && !online && (
           <p className="hint hint-warn">
-            {nodeLabel(id)} is {node?.status === 'silent' ? 'not reporting' : 'offline'}, so it can't receive commands.
-            {id === 'sentinel-hero' && ' Start the Wokwi simulator to bring it online.'}
+            {t(node?.status === 'silent' ? 'controls.notReporting' : 'controls.offline', { node: nodeLabel(id) })}
+            {id === 'sentinel-hero' && t('controls.startWokwi')}
           </p>
         )}
         <div className="control-row">
-          <span className="control-name">Siren</span>
+          <span className="control-name">{t('controls.siren')}</span>
           <button className={act.buzzer ? 'btn btn-danger' : 'btn'} onClick={() => actuate('buzzer', !act.buzzer)}>
-            {act.buzzer ? 'Stop siren' : 'Sound siren'}
+            {act.buzzer ? t('controls.stopSiren') : t('controls.soundSiren')}
           </button>
         </div>
         <div className="control-row">
-          <span className="control-name">Status light</span>
-          <div className="seg" role="group" aria-label="Status light">
-            {[['green', 'Green'], ['orange', 'Orange'], ['red', 'Red'], ['off', 'Off']].map(([c, label]) => (
+          <span className="control-name">{t('controls.light')}</span>
+          <div className="seg" role="group" aria-label={t('controls.light')}>
+            {['green', 'orange', 'red', 'off'].map((c) => (
               <button key={c} className={`seg-btn led-${c}`} aria-pressed={act.led === c} onClick={() => actuate('led', c)}>
-                {label}
+                {t(`led.${c}`)}
               </button>
             ))}
           </div>
         </div>
         <form className="control-row" onSubmit={(e) => { e.preventDefault(); actuate('display', text) }}>
-          <label className="control-name" htmlFor="oled-text">Screen message</label>
-          <input id="oled-text" maxLength={21} value={text} onChange={(e) => setText(e.target.value)} placeholder="Evacuate north gate" />
-          <button className="btn" type="submit">Show</button>
+          <label className="control-name" htmlFor="oled-text">{t('controls.screen')}</label>
+          <input id="oled-text" maxLength={21} value={text} onChange={(e) => setText(e.target.value)} placeholder={t('controls.screenPlaceholder')} />
+          <button className="btn" type="submit">{t('controls.show')}</button>
         </form>
       </fieldset>
       {note && <p className={note.ok ? 'note' : 'note note-error'} role="status">{note.text}</p>}

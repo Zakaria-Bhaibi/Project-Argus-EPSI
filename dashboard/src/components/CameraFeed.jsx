@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { FENCE, STRUCTURES } from '../site.js'
+import { locale, t } from '../i18n.js'
 import { REDUCED } from '../scene/common.js'
 import { World } from '../scene/World.jsx'
 import { intruderPose } from '../scene/effects.jsx'
@@ -73,8 +74,8 @@ export default function CameraFeed({ nodes, threats, threatFx, events, drill }) 
   const conf = target?.confidence ?? 0.94
 
   return (
-    <section className="panel camera" aria-label="Site camera">
-      <header className="panel-head"><h2>Mast camera</h2></header>
+    <section className="panel camera" aria-label={t('camera.label')}>
+      <header className="panel-head"><h2>{t('camera.title')}</h2></header>
       <div className="cctv">
         <Canvas camera={{ fov: 42, near: 0.5, far: 200 }} dpr={1} gl={{ antialias: true }}>
           <World nodes={nodes} threats={threats} threatFx={threatFx} lastCyberTs={lastCyberTs} drillStartedAt={drill?.startedAt}
@@ -84,11 +85,11 @@ export default function CameraFeed({ nodes, threats, threatFx, events, drill }) 
         <div className="cctv-overlay" aria-hidden="true">
           <span className="cctv-rec">● REC</span>
           <span className="cctv-id">CAM-01 MAST PTZ</span>
-          <span className="cctv-time">{time.toLocaleDateString()} {time.toLocaleTimeString()}</span>
-          <span className="cctv-mode">{target ? 'TRACKING' : 'PATROL'}</span>
-          <div ref={box} className="cctv-box"><span>person {conf.toFixed(2)}</span></div>
+          <span className="cctv-time">{time.toLocaleDateString(locale())} {time.toLocaleTimeString(locale())}</span>
+          <span className="cctv-mode">{target ? t('camera.tracking') : t('camera.patrol')}</span>
+          <div ref={box} className="cctv-box"><span>{t('camera.person')} {conf.toFixed(2)}</span></div>
         </div>
-        <p className="sr-only" aria-live="polite">{target ? 'Camera tracking a detected intruder' : 'Camera patrolling'}</p>
+        <p className="sr-only" aria-live="polite">{target ? t('camera.srTracking') : t('camera.srPatrol')}</p>
       </div>
     </section>
   )

@@ -1,4 +1,6 @@
 // Thin client for the ARGUS API. The JWT lives in memory + sessionStorage (cleared with the tab).
+import { apiError, t } from './i18n.js'
+
 const BASE = '/api/v1'
 let token = sessionStorage.getItem('argus.token')
 
@@ -17,7 +19,7 @@ async function call(path, opts = {}) {
   const body = await res.json().catch(() => ({}))
   if (!res.ok) {
     const detail = Array.isArray(body.detail) ? body.detail.map((d) => d.msg).join(', ') : body.detail
-    throw new Error(detail || `Request failed (${res.status})`)
+    throw new Error(apiError(detail) || t('error.request', { status: res.status }))
   }
   return body
 }

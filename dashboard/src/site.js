@@ -1,12 +1,15 @@
 // Layout of the AetherCorp outpost. Positions are in metres on the site plan (x east, z south).
-export const SITE = { name: 'Outpost K-7', region: 'Kerguelen plateau' }
+// Names are translated (see i18n.js).
+import { t } from './i18n.js'
+
+export const SITE = { get name() { return t('site.name') }, get region() { return t('site.region') } }
 
 export const NODE_INFO = {
-  'sentinel-hero': { label: 'Control hut', pos: [0, 0, 6], simulated: false },
-  'sentinel-01': { label: 'North gate', pos: [-2, 0, -17], simulated: true },
-  'sentinel-02': { label: 'Gas manifold', pos: [12, 0, -4], simulated: true },
-  'sentinel-03': { label: 'Turbine hall', pos: [-11, 0, -2], simulated: true },
-  'sentinel-04': { label: 'Battery store', pos: [9, 0, 11], simulated: true },
+  'sentinel-hero': { pos: [0, 0, 6], simulated: false },
+  'sentinel-01': { pos: [-2, 0, -17], simulated: true },
+  'sentinel-02': { pos: [12, 0, -4], simulated: true },
+  'sentinel-03': { pos: [-11, 0, -2], simulated: true },
+  'sentinel-04': { pos: [9, 0, 11], simulated: true },
 }
 
 export const STRUCTURES = [
@@ -21,4 +24,4 @@ export const STRUCTURES = [
 
 export const FENCE = [[-22, -21], [21, -21], [23, 18], [-20, 19]]
 
-export const nodeLabel = (id) => NODE_INFO[id]?.label ?? id
+export const nodeLabel = (id) => (NODE_INFO[id] ? t(`node.${id}`) : id)

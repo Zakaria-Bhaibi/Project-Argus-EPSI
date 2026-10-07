@@ -1,9 +1,10 @@
 // Live readings of one node: three small single-series charts (one measure each, one axis each).
 import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { NODE_INFO, nodeLabel } from '../site.js'
+import { locale, t } from '../i18n.js'
 
 const INK = '#34495A', MUTED = '#7D8B95', RULE = '#C9D2D8'
-const time = (ts) => new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+const time = (ts) => new Date(ts * 1000).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
 function Spark({ title, unit, data, field, domain, alarm, format = (v) => v.toFixed(1) }) {
   const last = data.length ? data[data.length - 1][field] : null
@@ -21,7 +22,7 @@ function Spark({ title, unit, data, field, domain, alarm, format = (v) => v.toFi
                    allowDecimals={false} tickFormatter={(v) => (Math.abs(v) < 2 ? v.toFixed(1) : Math.round(v))} />
             {alarm != null && (
               <ReferenceLine y={alarm} stroke="#C2185B" strokeDasharray="4 3"
-                             label={{ value: 'alarm', position: 'insideTopRight', fill: '#7D8B95', fontSize: 11 }} />
+                             label={{ value: t('spark.alarm'), position: 'insideTopRight', fill: '#7D8B95', fontSize: 11 }} />
             )}
             <Tooltip
               cursor={{ stroke: RULE }}
@@ -42,28 +43,28 @@ export default function NodePanel({ id, node, series, traffic }) {
   if (!id) {
     return (
       <section className="panel node-panel is-empty">
-        <p>Select a node on the map to see its live readings and controls.</p>
+        <p>{t('node.empty')}</p>
       </section>
     )
   }
   const data = series || []
-  const statusText = { online: 'Online', silent: 'Not reporting', offline: 'Offline', unknown: 'Waiting for data' }[node?.status ?? 'unknown']
+  const statusText = t(`status.${node?.status ?? 'unknown'}`)
   return (
-    <section className="panel node-panel" aria-label={`Readings for ${nodeLabel(id)}`}>
+    <section className="panel node-panel" aria-label={t('node.readings', { node: nodeLabel(id) })}>
       <header className="panel-head">
         <h2>{nodeLabel(id)}</h2>
         <p className="node-sub">
           <span className={`status status-${node?.status ?? 'unknown'}`}>{statusText}</span>
           <span>{id}</span>
-          <span>{NODE_INFO[id]?.simulated ? 'Simulated node' : 'ESP32 firmware (Wokwi)'}</span>
-          {traffic && <span>Traffic {traffic.msgs} msg / 10 s</span>}
-          {node?.last?.pir && <span className="status status-pir">Motion</span>}
+          <span>{NODE_INFO[id]?.simulated ? t('node.simulated') : t('node.firmware')}</span>
+          {traffic && <span>{t('node.traffic', { msgs: traffic.msgs })}</span>}
+          {node?.last?.pir && <span className="status status-pir">{t('node.motion')}</span>}
         </p>
       </header>
       <div className="sparks">
-        <Spark title="Temperature" unit="°C" data={data} field="temp_c" domain={[(m) => Math.floor(m - 1), (m) => Math.ceil(m + 1)]} />
-        <Spark title="Gas" unit="ppm" data={data} field="gas_ppm" domain={[0, (m) => Math.ceil((m + 100) / 100) * 100]} format={(v) => Math.round(v).toString()} />
-        <Spark title="Anomaly score" unit="" data={data} field="anomaly" domain={[0, 1]} alarm={0.5} format={(v) => v.toFixed(2)} />
+        <Spark title={t('spark.temp')} unit="°C" data={data} field="temp_c" domain={[(m) => Math.floor(m - 1), (m) => Math.ceil(m + 1)]} />
+        <Spark title={t('spark.gas')} unit="ppm" data={data} field="gas_ppm" domain={[0, (m) => Math.ceil((m + 100) / 100) * 100]} format={(v) => Math.round(v).toString()} />
+        <Spark title={t('spark.anomaly')} unit="" data={data} field="anomaly" domain={[0, 1]} alarm={0.5} format={(v) => v.toFixed(2)} />
       </div>
     </section>
   )

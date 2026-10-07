@@ -4,7 +4,8 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
-import { NODE_INFO } from '../site.js'
+import { NODE_INFO, nodeLabel } from '../site.js'
+import { t as tr } from '../i18n.js'   // `t` is the threat state in this file
 import { REDUCED } from '../scene/common.js'
 import { World } from '../scene/World.jsx'
 import { intruderPose } from '../scene/effects.jsx'
@@ -53,8 +54,8 @@ function LabelTracker({ labels, badges, threatFx }) {
 
 function hazards(t) {
   const out = []
-  if (t.gas > 0.02) out.push({ kind: 'gas', text: `Gas leak ${Math.round(t.gasPpm)} ppm`, icon: '⚠' })
-  if (t.heat > 0.02) out.push({ kind: 'heat', text: `Overheat ${t.tempC.toFixed(1)} °C`, icon: '▲' })
+  if (t.gas > 0.02) out.push({ kind: 'gas', text: tr('hazard.gas', { ppm: Math.round(t.gasPpm) }), icon: '⚠' })
+  if (t.heat > 0.02) out.push({ kind: 'heat', text: tr('hazard.heat', { temp: t.tempC.toFixed(1) }), icon: '▲' })
   return out
 }
 
@@ -65,7 +66,7 @@ export default function SiteTwin({ nodes, threats, threatFx, events, drill, sele
   return (
     <>
       <div className="pin-labels">
-        {Object.entries(NODE_INFO).map(([id, info]) => {
+        {Object.keys(NODE_INFO).map((id) => {
           const node = nodes[id]
           const t = threatFx[id]
           const hz = t ? hazards(t) : []
@@ -74,9 +75,9 @@ export default function SiteTwin({ nodes, threats, threatFx, events, drill, sele
             <div key={id}>
               <button ref={(el) => { labelRefs.current[id] = el }}
                       className={`pin-label${selected === id ? ' is-selected' : ''}`} onClick={() => onSelect(id)}>
-                <span className="pin-name">{info.label}</span>
+                <span className="pin-name">{nodeLabel(id)}</span>
                 <span className="pin-value">
-                  {node?.last ? `${node.last.temp_c.toFixed(1)}°  ${gas == null ? 'gas warming up' : `${Math.round(gas)} ppm`}` : 'no data'}
+                  {node?.last ? `${node.last.temp_c.toFixed(1)}°  ${gas == null ? tr('pin.gasWarming') : `${Math.round(gas)} ppm`}` : tr('pin.noData')}
                 </span>
               </button>
               {hz.length > 0 && (
@@ -86,7 +87,7 @@ export default function SiteTwin({ nodes, threats, threatFx, events, drill, sele
               )}
               {t?.intruder && (
                 <div ref={(el) => { badgeRefs.current[`intruder:${id}`] = el }} className="hazard-stack" role="alert">
-                  <span className="hazard hazard-intruder"><b aria-hidden="true">◆</b>Intruder detected</span>
+                  <span className="hazard hazard-intruder"><b aria-hidden="true">◆</b>{tr('hazard.intruder')}</span>
                 </div>
               )}
             </div>
